@@ -2,22 +2,22 @@
 
 #include <QByteArray>
 #include <QMainWindow>
+#include <QString>
 #include <QVector>
 
 class QCloseEvent;
 class QDockWidget;
-class QString;
 class QWidget;
 
 namespace signalforge::ui {
 
-class SpectrumWidget;
-
-// A window displays views but never owns an actual RF receiver.
-// Only the primary window stores the "last session" layout.
+// A workspace is a collection of views; no radio hardware belongs to a window.
+// Each window has an independent set of dock panels and can start empty.
 class MainWindow final : public QMainWindow {
 public:
-    explicit MainWindow(bool primaryWindow = true, QWidget* parent = nullptr);
+    explicit MainWindow(bool primaryWindow = true,
+                        const QString& initialPanel = {},
+                        QWidget* parent = nullptr);
 
 protected:
     void closeEvent(QCloseEvent* event) override;
@@ -35,8 +35,7 @@ private:
     void loadWorkspace();
     void resetWorkspace();
 
-    bool primaryWindow_;
-    SpectrumWidget* spectrum_ = nullptr;
+    bool primaryWindow_ = true;
     QVector<QDockWidget*> panels_;
     QByteArray defaultState_;
     QByteArray defaultGeometry_;
