@@ -47,7 +47,7 @@ See [Building SignalForge](docs/BUILDING.md) for Windows/Linux instructions. The
 
 ## Open-source commitment
 
-SignalForge is intended to be **100% open source**. A specific software license has **not yet been selected**. Until a LICENSE file is added, do not assume this repository grants redistribution or modification permissions beyond what applicable law provides. We will evaluate GPL-3.0-or-later and compatibility with upstream libraries/codecs before first code publication.
+SignalForge-authored software is licensed under the **GNU General Public License, version 3 or any later version** (`GPL-3.0-or-later`). See [LICENSE](LICENSE) for the complete GPLv3 terms. You may use, modify, and redistribute the software under those terms, including their obligations when distributing modified versions. Third-party components and geographic datasets retain their own licenses; the bundled Natural Earth sample uses public-domain geographic data. Compatibility and distribution notices for dependencies such as Qt, radio codecs, and other libraries must be audited before broader releases.
 
 ## Responsible use
 
