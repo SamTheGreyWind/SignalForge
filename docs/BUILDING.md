@@ -10,9 +10,9 @@ For pull requests that include the GitHub Actions workflow, you can download a p
 4. Extract the downloaded ZIP to a folder; preserve its Qt DLLs and `platforms` subfolder.
 5. Double-click `SignalForge.exe`.
 
-This preview is **not an installer** and is not a signed release. Windows SmartScreen may warn about unfamiliar unsigned applications. Only run artifacts from workflow runs you trust. Its panels are currently placeholders, and no SDR hardware functions are implemented.
+This preview is **not an installer** and is not a signed release. Windows SmartScreen may warn about unfamiliar unsigned applications. Only run artifacts from workflow runs you trust. It includes synthetic spectrum/waterfall activity, fictional monitoring tables and illustrated map layers. No SDR hardware functions are implemented.
 
-The current build provides a **Qt 6 desktop shell** with dockable/floating panels, named layouts and a small independently testable C++ core. **No hardware SDR reception, spectrum plotting or protocol decoding is implemented yet.**
+The current build provides a **Qt 6 desktop shell** with dockable/floating panels, named layouts, a moving **synthetic** spectrum/waterfall, sample table/map panels, and a small independently testable C++ core. **No hardware SDR reception or protocol decoding is implemented yet.**
 
 ## Requirements
 
@@ -59,6 +59,16 @@ ctest --test-dir build-core --output-on-failure
 
 This proves the core can build without Qt.
 
+## Exploring the demonstration interface
+
+- The waterfall animates generated RF-like signals. **No radio is connected or sampled.**
+- Click/drag across the spectrum or waterfall to move the VFO marker.
+- Use the mouse wheel over the spectrum to tune in 25 kHz steps and pan the simulated frequency span.
+- Toggle **Animate demo** to pause/resume updates.
+- Scanner, P25, receivers, recordings, ADS-B and APRS contain **fictional preview data** only.
+- ADS-B and APRS map panels have independent checkboxes to show or hide each illustrated layer. Coordinates are screen-space drawings, **not real locations**.
+- Choose **File > New Window** (Ctrl+N) to open a separate top-level workspace on any monitor. Closing a secondary window does not stop the others; only the main window auto-saves the last-session layout.
+
 ## Workspaces and panels
 
 - Drag panel title bars to dock, tab or float; floating panels can move to other monitors.
@@ -69,4 +79,4 @@ This proves the core can build without Qt.
 
 ## Known limitations
 
-No SDR device access, live waterfall, audio, maps, TX or decoders are present. Panels are deliberately marked as placeholders. Frequency offset utility tests exist but are not wired to drivers. Licensing and release packaging are pending.
+No SDR device access, **real** waterfall, audio, geographic maps, TX or decoders are present. Data and graphics are synthetic demos only. Frequency offset utility tests exist but are not wired to drivers. Licensing and release packaging are pending.
