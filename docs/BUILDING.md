@@ -85,6 +85,20 @@ The base map's pixel positions and test markers use the same WGS84 latitude/long
 
 The bundled example uses generalized Natural Earth public-domain coastline/boundary data. Other map packages are user-supplied files with their own licenses. Users deploying this in commercial or governmental settings are responsible for reviewing map/imagery attribution, distribution rights, and retention/security policy. Avoid importing untrusted large files; future versions will add richer format support and map-package validation.
 
+## Workspace-first GUI and spectrum zoom
+
+The prototype no longer displays an immovable project name, slogan, or welcome panel in the middle of an otherwise empty workspace. The **window title** still identifies the running application as SignalForge. All operator data views are movable/resizable Qt dock widgets; close and reopen them with **Panels** or the workspace toolbar. The **View** menu can hide the status bar or workspace toolbar, and the workspace toolbar itself can now float or dock at another window edge. The menu bar remains available so panes can always be restored.
+
+**Spectrum zoom is different from filter bandwidth:**
+
+- **Ctrl + mouse wheel over the spectrum/waterfall** zooms the *visible frequency span* around the mouse position. The frequency under the pointer remains stationary.
+- **Zoom +**, **Zoom -**, and **Reset** buttons operate about the view center. **Span** enters the displayed width directly in MHz (25 kHz to 12 MHz).
+- **Normal mouse wheel** retains the prior tune/pan behavior.
+- **Filter** and amber passband edges adjust only the visible VFO filter width; they do not change the spectrum's display span.
+- Zoom resets the *simulated* historical waterfall lines because their columns referred to the previous frequency scale; new matching scanlines appear immediately. No RF samples are involved yet.
+
+Qt application window controls and the menu bar are structural navigation, not operator panels. Full panel-instance management and automatic recreation of multiple top-level windows at startup remain later architectural improvements.
+
 ## Operator UI preview updates
 
 - **Sharpened spectrum/waterfall:** the RF demo now draws jagged, bin-like synthetic power samples instead of rounded Gaussian-only hills. The waterfall uses a hard-pixel dark-blue → cyan → yellow → orange/red heat palette. These are simulated RF shapes, **not captured I/Q FFT samples**.
