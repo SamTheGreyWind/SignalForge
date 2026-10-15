@@ -21,6 +21,7 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QPoint>
+#include <QPushButton>
 #include <QSettings>
 #include <QSignalBlocker>
 #include <QStatusBar>
@@ -102,11 +103,47 @@ QWidget* spectrumPanel() {
     controls->addStretch();
     layout->addLayout(controls);
 
+    auto* zoomControls = new QHBoxLayout;
+    auto* zoomIn = new QPushButton("Zoom +", panel);
+    auto* zoomOut = new QPushButton("Zoom -", panel);
+    auto* zoomFit = new QPushButton("Reset", panel);
+    zoomControls->addWidget(zoomIn);
+    zoomControls->addWidget(zoomOut);
+    zoomControls->addWidget(zoomFit);
+    zoomControls->addWidget(new QLabel("Span", panel));
+    auto* span = new QDoubleSpinBox(panel);
+    span->setRange(0.025, 12.0);
+    span->setDecimals(3);
+    span->setSingleStep(0.25);
+    span->setSuffix(" MHz");
+    span->setValue(2.4);
+    span->setToolTip("Visible RF frequency span. Ctrl+mouse wheel zooms at cursor.");
+    zoomControls->addWidget(span);
+    zoomControls->addStretch();
+    layout->addLayout(zoomControls);
+
     auto* widget = new SpectrumWidget(panel);
     layout->addWidget(widget, 1);
+    QObject::connect(zoomIn, &QPushButton::clicked, panel, [widget] {
+        widget->setSpanHz(static_cast<qint64>(std::llround(widget->spanHz() * 0.75)));
+    });
+    QObject::connect(zoomOut, &QPushButton::clicked, panel, [widget] {
+        widget->setSpanHz(static_cast<qint64>(std::llround(widget->spanHz() * 1.33333)));
+    });
+    QObject::connect(zoomFit, &QPushButton::clicked, panel, [widget] {
+        widget->setSpanHz(2'400'000);
+    });
+    QObject::connect(span, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+                     panel, [widget](double mhz) {
+        widget->setSpanHz(static_cast<qint64>(std::llround(mhz * 1'000'000.0)));
+    });
+    widget->setSpanChangedHandler([span](qint64 hz) {
+        const QSignalBlocker blocker(span);
+        span->setValue(static_cast<double>(hz) / 1'000'000.0);
+    });
     auto* hint = new QLabel(
-        "DEMO: click/drag to tune; drag amber filter edges to adjust passband; "
-        "scroll to move center frequency. No live RF.",
+        "DEMO: Ctrl+wheel zooms at cursor; wheel tunes; click/drag VFO; "
+        "drag amber edges to adjust filter. No live RF.",
         panel);
     hint->setWordWrap(true);
     layout->addWidget(hint);
@@ -148,7 +185,7 @@ MainWindow::MainWindow(bool primaryWindow,
     : QMainWindow(parent), primaryWindow_(primaryWindow) {
     setObjectName("signalforge.main");
     setWindowTitle(primaryWindow_
-        ? "SignalForge — The Open-Source Radio Multitool"
+        ? "SignalForge"
         : "SignalForge — Workspace");
     resize(1380, 840);
     setDockOptions(QMainWindow::AllowNestedDocks |
@@ -156,28 +193,10 @@ MainWindow::MainWindow(bool primaryWindow,
                    QMainWindow::AnimatedDocks |
                    QMainWindow::GroupedDragging);
 
-    // The central widget is deliberately NOT the waterfall: views can be
-    // closed, floated or moved without leaving an immutable drawing behind.
-    auto* central = new QWidget(this);
-    auto* centerLayout = new QVBoxLayout(central);
-    auto* heading = new QLabel("SignalForge", central);
-    QFont headingFont = heading->font();
-    headingFont.setPointSize(20);
-    headingFont.setBold(true);
-    heading->setFont(headingFont);
-    heading->setAlignment(Qt::AlignCenter);
-    auto* instructions = new QLabel(
-        "Forged by Operators. Built for Everyone.\n\n"
-        "Use Panels > Show/Hide (or the toolbar) to build this workspace.\n"
-        "Drag panels to dock, float, resize, or move them to another monitor.",
-        central);
-    instructions->setAlignment(Qt::AlignCenter);
-    instructions->setWordWrap(true);
-    centerLayout->addStretch();
-    centerLayout->addWidget(heading);
-    centerLayout->addWidget(instructions);
-    centerLayout->addStretch();
-    setCentralWidget(central);
+    // Intentionally no central marketing/welcome widget. Qt allocates the
+    // available area to movable docks; hiding all docks leaves a clean canvas.
+    // Application identification belongs in the OS window title, not in
+    // permanent, non-removable workspace content.
 
     // Each top-level window gets independent VIEW instances. Later RF engines
     // will be separate from all of these GUI widgets.
@@ -302,13 +321,22 @@ void MainWindow::createMenus() {
     // way to select more panels without hiding the menu bar.
     auto* toolbar = new QToolBar("Workspace Toolbar", this);
     toolbar->setObjectName("signalforge.workspace.toolbar");
-    toolbar->setMovable(false);
+    toolbar->setMovable(true);
+    toolbar->setFloatable(true);
     auto* picker = new QToolButton(toolbar);
     picker->setText("Panels  ▾");
     picker->setPopupMode(QToolButton::InstantPopup);
     picker->setMenu(panelMenu);
     toolbar->addWidget(picker);
     addToolBar(Qt::TopToolBarArea, toolbar);
+
+    auto* view = menuBar()->addMenu("&View");
+    view->addAction(toolbar->toggleViewAction());
+    auto* showStatus = view->addAction("Show Status Bar");
+    showStatus->setCheckable(true);
+    showStatus->setChecked(true);
+    connect(showStatus, &QAction::toggled, this,
+            [this](bool visible) { statusBar()->setVisible(visible); });
 
     auto* layouts = menuBar()->addMenu("&Workspaces");
     auto* save = layouts->addAction("&Save Layout As...");
@@ -326,9 +354,7 @@ void MainWindow::createMenus() {
     auto* about = help->addAction("&About SignalForge");
     connect(about, &QAction::triggered, this, [this] {
         QMessageBox::about(this, "About SignalForge",
-            "SignalForge 0.1.0 — Operator Interface Preview\n\n"
-            "The Open-Source Radio Multitool\n"
-            "Forged by Operators. Built for Everyone.\n\n"
+            "Version 0.1.0 — Operator Interface Preview\n\n"
             "Spectrum, waterfall, calls and station positions are simulated. "
             "User-supplied offline MBTiles basemaps are real. "
             "SDR hardware, receiver filters and protocol decoders "
