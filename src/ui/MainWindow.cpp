@@ -32,6 +32,7 @@
 #include <QWidget>
 
 #include <cmath>
+#include <memory>
 
 namespace signalforge::ui {
 namespace {
@@ -110,27 +111,30 @@ QWidget* spectrumPanel() {
     layout->addWidget(hint);
     QObject::connect(animate, &QCheckBox::toggled, widget,
                      &SpectrumWidget::setRunning);
+    const auto applyingModePreset = std::make_shared<bool>(false);
     QObject::connect(modes, QOverload<int>::of(&QComboBox::currentIndexChanged),
-                     panel, [modes, bandwidth](int index) {
+                     panel, [modes, bandwidth, applyingModePreset](int index) {
         if (index < 0) return;
         const double preset = modes->itemData(index).toDouble();
         if (preset > 0) {
             // A mode preset is not a manual filter-width change.
-            const QSignalBlocker blocker(modes);
+            *applyingModePreset = true;
             bandwidth->setValue(preset);
+            *applyingModePreset = false;
         }
     });
     QObject::connect(bandwidth, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
-                     panel, [widget, modes, bandwidth](double khz) {
+                     panel, [widget, modes, bandwidth, applyingModePreset](double khz) {
         widget->setPassbandHz(static_cast<qint64>(std::llround(khz * 1000.0)));
         const double preset = modes->currentData().toDouble();
-        if (std::abs(preset - bandwidth->value()) > 0.06)
+        if (!*applyingModePreset && std::abs(preset - bandwidth->value()) > 0.06)
             modes->setCurrentIndex(modes->count() - 1);
     });
-    widget->setBandwidthChangedHandler([bandwidth, modes](qint64 hz) {
+    widget->setBandwidthChangedHandler([bandwidth, modes, applyingModePreset](qint64 hz) {
         const QSignalBlocker blocker(bandwidth);
         bandwidth->setValue(static_cast<double>(hz) / 1000.0);
-        modes->setCurrentIndex(modes->count() - 1);
+        if (!*applyingModePreset)
+            modes->setCurrentIndex(modes->count() - 1);
     });
     return panel;
 }
