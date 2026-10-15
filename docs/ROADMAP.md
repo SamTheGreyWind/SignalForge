@@ -5,7 +5,7 @@
 ## Phase 0 — Establish the project
 
 - Publish README, requirements, architecture and contribution process.
-- Select a specific open-source license after reviewing third-party dependencies.
+- **Selected:** GPL-3.0-or-later for SignalForge-authored software. Continue the third-party dependency and redistribution/license audit before general releases.
 - Set up CMake, formatting, tests, CI and issue templates.
 - Agree on a small reference hardware list and sample I/Q fixtures.
 
