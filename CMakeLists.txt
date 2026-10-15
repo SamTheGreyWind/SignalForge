@@ -30,6 +30,10 @@ if(SIGNALFORGE_BUILD_GUI)
         src/app/main.cpp
         src/ui/MainWindow.h
         src/ui/MainWindow.cpp
+        src/ui/SpectrumWidget.h
+        src/ui/SpectrumWidget.cpp
+        src/ui/DemoMapWidget.h
+        src/ui/DemoMapWidget.cpp
     )
     target_link_libraries(SignalForge PRIVATE signalforge_core Qt6::Widgets)
     target_include_directories(SignalForge PRIVATE src)
