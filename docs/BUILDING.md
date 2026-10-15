@@ -12,13 +12,13 @@ For pull requests that include the GitHub Actions workflow, you can download a p
 
 This preview is **not an installer** and is not a signed release. Windows SmartScreen may warn about unfamiliar unsigned applications. Only run artifacts from workflow runs you trust. It includes synthetic spectrum/waterfall activity, fictional monitoring tables and illustrated map layers. No SDR hardware functions are implemented.
 
-The current build provides a **Qt 6 desktop shell** with dockable/floating panels, named layouts, a moving **synthetic** spectrum/waterfall, sample table/map panels, and a small independently testable C++ core. **No hardware SDR reception or protocol decoding is implemented yet.**
+The current build provides a **Qt 6 desktop shell** with dockable/floating panels, named layouts, a moving **synthetic** spectrum/waterfall, sample monitoring tables, a genuine **offline raster MBTiles map reader**, and a small independently testable C++ core. **No hardware SDR reception or protocol decoding is implemented yet.**
 
 ## Requirements
 
 - CMake 3.21 or newer.
 - A compiler with C++20 support (MSVC 2022, GCC or Clang).
-- Qt 6.4 or newer with the **Widgets** module for the desktop application.
+- Qt 6.4 or newer with the **Widgets and Sql** modules (including the QSQLITE plugin) for the desktop application.
 - Windows 11 is the first target; Linux is a supported build target. macOS has not been validated.
 
 ## Windows 11 (Visual Studio)
@@ -40,7 +40,7 @@ The executable is typically `build/Release/SignalForge.exe` with the Visual Stud
 
 ~~~bash
 sudo apt-get update
-sudo apt-get install -y build-essential cmake qt6-base-dev
+sudo apt-get install -y build-essential cmake qt6-base-dev libqt6sql6-sqlite
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON
 cmake --build build --parallel
 ctest --test-dir build --output-on-failure
@@ -66,8 +66,24 @@ This proves the core can build without Qt.
 - Use the mouse wheel over the spectrum to tune in 25 kHz steps and pan the simulated frequency span.
 - Toggle **Animate demo** to pause/resume updates.
 - Scanner, P25, receivers, recordings, ADS-B and APRS contain **fictional preview data** only.
-- ADS-B and APRS map panels have independent checkboxes to show or hide each illustrated layer. Coordinates are screen-space drawings, **not real locations**.
+- ADS-B and APRS panels can display imported offline georeferenced raster maps with independent synthetic marker overlays; markers do not represent real received locations.
 - Choose **File > New Window** (Ctrl+N) to open a separate top-level workspace on any monitor. Closing a secondary window does not stop the others; only the main window auto-saves the last-session layout.
+
+## Offline GIS map support (preview)
+
+**No internet connection or tile service is used.** The map is read from a file you select; no map is included in the download. This preview supports **raster MBTiles** (SQLite tiles with PNG or JPEG imagery, including suitably licensed satellite imagery). Vector MBTiles / PBF, GeoTIFF, GeoPackage, Shapefile, WMS/WMTS and elevation rasters are **not implemented yet**.
+
+1. Create or obtain a georeferenced **raster MBTiles** file covering your chosen geographic area, using a GIS tool such as QGIS and data you have permission to store offline. The map should use standard Web Mercator XYZ/MBTiles tiling; MBTiles default TMS tile-row convention is handled automatically.
+2. Put the file anywhere accessible, including an external SSD or USB drive.
+3. Open **ADS-B Map** or **APRS Map** and click **Add MBTiles…**.
+4. Select the file. The map loads **in place** without copying it into SignalForge. If you disconnect the drive, the file won't be available until it is reconnected.
+5. Drag with the left mouse button to pan, and scroll to zoom. **ADS-B** and **APRS** checkboxes control separate example marker overlays on the same map.
+6. Click **Test Lat/Lon Pin…** to enter a test coordinate (decimal degrees, WGS84) and center the view on the resulting georeferenced marker.
+7. Change or remove entries using the map selector and **Remove**. Removing an entry only changes SignalForge's list; it **does not delete the original file**.
+
+The base map's pixel positions and test markers use the same WGS84 latitude/longitude to Web Mercator projection. The sample ADS-B/APRS markers are intentionally **fictional**, anchored near the imported map center so they can be evaluated visually. They are **not live GPS or RF data**. Outside the geographic tile coverage of the current package, the map displays an empty grid; no online fallback is attempted.
+
+A map package is a user-supplied file with its own license. Users deploying this in commercial or governmental settings are responsible for reviewing map/imagery attribution, distribution rights, and retention/security policy. Avoid importing untrusted large files; future versions will add richer format support and map-package validation.
 
 ## Workspaces and panels
 
@@ -79,4 +95,4 @@ This proves the core can build without Qt.
 
 ## Known limitations
 
-No SDR device access, **real** waterfall, audio, geographic maps, TX or decoders are present. Data and graphics are synthetic demos only. Frequency offset utility tests exist but are not wired to drivers. Licensing and release packaging are pending.
+No SDR device access, **real RF** waterfall, audio, live aircraft/APRS locations, TX or decoders are present. An imported MBTiles basemap is genuine georeferenced map data, but all RF/position overlays remain synthetic. Frequency offset utility tests exist but are not wired to drivers. Licensing and release packaging are pending.
