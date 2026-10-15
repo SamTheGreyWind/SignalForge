@@ -114,7 +114,11 @@ QWidget* spectrumPanel() {
                      panel, [modes, bandwidth](int index) {
         if (index < 0) return;
         const double preset = modes->itemData(index).toDouble();
-        if (preset > 0) bandwidth->setValue(preset);
+        if (preset > 0) {
+            // A mode preset is not a manual filter-width change.
+            const QSignalBlocker blocker(modes);
+            bandwidth->setValue(preset);
+        }
     });
     QObject::connect(bandwidth, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
                      panel, [widget, modes, bandwidth](double khz) {
