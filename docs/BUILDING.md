@@ -16,34 +16,34 @@ The current build provides a **Qt 6 desktop shell** with dockable/floating panel
 3. Open a Developer PowerShell with MSVC tools available.
 4. Configure, build and test (replace the example Qt path with your actual installation):
 
-\`\`\`powershell
+~~~powershell
 cmake -S . -B build -DCMAKE_PREFIX_PATH="C:/Qt/6.8.3/msvc2022_64" -DBUILD_TESTING=ON
 cmake --build build --config Release
 ctest --test-dir build -C Release --output-on-failure
-\`\`\`
+~~~
 
-The executable is typically \`build/Release/SignalForge.exe\` with the Visual Studio generator. Deploy required Qt runtime libraries/plugins using Qt's \`windeployqt\` tool for machines without a Qt development environment.
+The executable is typically `build/Release/SignalForge.exe` with the Visual Studio generator. Deploy required Qt runtime libraries/plugins using Qt's `windeployqt` tool for machines without a Qt development environment.
 
 ## Linux (Ubuntu/Debian example)
 
-\`\`\`bash
+~~~bash
 sudo apt-get update
 sudo apt-get install -y build-essential cmake qt6-base-dev
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON
 cmake --build build --parallel
 ctest --test-dir build --output-on-failure
 ./build/SignalForge
-\`\`\`
+~~~
 
 The GUI requires a graphical desktop session. Wayland window-placement restrictions may affect floating panel restoration.
 
 ## Headless core tests (Qt not required)
 
-\`\`\`bash
+~~~bash
 cmake -S . -B build-core -DSIGNALFORGE_BUILD_GUI=OFF -DBUILD_TESTING=ON
 cmake --build build-core --parallel
 ctest --test-dir build-core --output-on-failure
-\`\`\`
+~~~
 
 This proves the core can build without Qt.
 
