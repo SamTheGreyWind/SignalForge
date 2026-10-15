@@ -7,10 +7,10 @@ For pull requests that include the GitHub Actions workflow, you can download a p
 1. Open the pull request's **Checks** tab, or go to the repository's **Actions** tab.
 2. Open the most recent successful **Build and Test** workflow run for the pull request.
 3. Scroll to **Artifacts** and download **SignalForge-Windows-Preview** (GitHub may require sign-in).
-4. Extract the downloaded ZIP to a folder; preserve its Qt DLLs and `platforms` subfolder.
+4. Extract the downloaded ZIP to a folder; keep its Qt DLLs, `platforms`, `sqldrivers`, and **`maps`** subfolders together.
 5. Double-click `SignalForge.exe`.
 
-This preview is **not an installer** and is not a signed release. Windows SmartScreen may warn about unfamiliar unsigned applications. Only run artifacts from workflow runs you trust. It includes synthetic spectrum/waterfall activity, fictional monitoring tables and illustrated map layers. No SDR hardware functions are implemented.
+This preview is **not an installer** and is not a signed release. Windows SmartScreen may warn about unfamiliar unsigned applications. Only run artifacts from workflow runs you trust. It includes synthetic spectrum/waterfall activity, fictional monitoring tables, a **bundled offline Natural Earth MBTiles sample**, and the ability to import your own maps. No SDR hardware functions are implemented.
 
 The current build provides a **Qt 6 desktop shell** with dockable/floating panels, named layouts, a moving **synthetic** spectrum/waterfall, sample monitoring tables, a genuine **offline raster MBTiles map reader**, and a small independently testable C++ core. **No hardware SDR reception or protocol decoding is implemented yet.**
 
@@ -71,19 +71,19 @@ This proves the core can build without Qt.
 
 ## Offline GIS map support (preview)
 
-**No internet connection or tile service is used.** The map is read from a file you select; no map is included in the download. This preview supports **raster MBTiles** (SQLite tiles with PNG or JPEG imagery, including suitably licensed satellite imagery). Vector MBTiles / PBF, GeoTIFF, GeoPackage, Shapefile, WMS/WMTS and elevation rasters are **not implemented yet**.
+**No internet connection or tile service is used.** The Windows preview now includes a small, coarse public-domain Natural Earth raster MBTiles map at `maps/SignalForge_Offline_GIS_Sample.mbtiles`. It auto-opens when no previous map selection is saved; you can always select another file. The generator is in `tools/generate_demo_mbtiles.py` and uses only Python's standard library. This preview supports **raster MBTiles** (SQLite tiles with PNG or JPEG imagery, including suitably licensed satellite imagery). Vector MBTiles / PBF, GeoTIFF, GeoPackage, Shapefile, WMS/WMTS and elevation rasters are **not implemented yet**.
 
-1. Create or obtain a georeferenced **raster MBTiles** file covering your chosen geographic area, using a GIS tool such as QGIS and data you have permission to store offline. The map should use standard Web Mercator XYZ/MBTiles tiling; MBTiles default TMS tile-row convention is handled automatically.
-2. Put the file anywhere accessible, including an external SSD or USB drive.
-3. Open **ADS-B Map** or **APRS Map** and click **Add MBTiles…**.
-4. Select the file. The map loads **in place** without copying it into SignalForge. If you disconnect the drive, the file won't be available until it is reconnected.
+1. Try the **bundled Natural Earth sample** first; it covers parts of North America at zoom levels 3–5 and is a low-resolution geographic orientation map, **not suitable for navigation**. For useful street-level detail, create or obtain a georeferenced **raster MBTiles** package covering your area, using a GIS tool such as QGIS and data you have permission to store offline. The map should use standard Web Mercator XYZ/MBTiles tiling; MBTiles default TMS tile-row convention is handled automatically.
+2. Put any **additional** map file somewhere accessible, including an external SSD or USB drive.
+3. Open **ADS-B Map** or **APRS Map**. Select the bundled sample from the map list, or click **Add MBTiles…** for your own file.
+4. Select the file. Your imported map loads **in place** without copying it into SignalForge. If you disconnect the drive, the file won't be available until it is reconnected.
 5. Drag with the left mouse button to pan, and scroll to zoom. **ADS-B** and **APRS** checkboxes control separate example marker overlays on the same map.
 6. Click **Test Lat/Lon Pin…** to enter a test coordinate (decimal degrees, WGS84) and center the view on the resulting georeferenced marker.
-7. Change or remove entries using the map selector and **Remove**. Removing an entry only changes SignalForge's list; it **does not delete the original file**.
+7. Change or remove **imported** entries using the map selector and **Remove**. Removing an entry only changes SignalForge's list; it **does not delete the original file**. The bundled sample stays available while the preview is installed; selecting **(No offline base map)** hides it.
 
 The base map's pixel positions and test markers use the same WGS84 latitude/longitude to Web Mercator projection. The sample ADS-B/APRS markers are intentionally **fictional**, anchored near the imported map center so they can be evaluated visually. They are **not live GPS or RF data**. Outside the geographic tile coverage of the current package, the map displays an empty grid; no online fallback is attempted.
 
-A map package is a user-supplied file with its own license. Users deploying this in commercial or governmental settings are responsible for reviewing map/imagery attribution, distribution rights, and retention/security policy. Avoid importing untrusted large files; future versions will add richer format support and map-package validation.
+The bundled example uses generalized Natural Earth public-domain coastline/boundary data. Other map packages are user-supplied files with their own licenses. Users deploying this in commercial or governmental settings are responsible for reviewing map/imagery attribution, distribution rights, and retention/security policy. Avoid importing untrusted large files; future versions will add richer format support and map-package validation.
 
 ## Workspaces and panels
 
