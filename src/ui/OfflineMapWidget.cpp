@@ -1,6 +1,7 @@
 #include "ui/OfflineMapWidget.h"
 #include "core/WebMercator.h"
 
+#include <QCheckBox>
 #include <QComboBox>
 #include <QDir>
 #include <QFileDialog>
@@ -12,6 +13,7 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPushButton>
+#include <QSizePolicy>
 #include <QSettings>
 #include <QSqlDatabase>
 #include <QSqlQuery>
