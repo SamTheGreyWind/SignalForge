@@ -38,15 +38,12 @@ using signalforge::core::toWorldPixel;
 using signalforge::core::worldSize;
 using signalforge::core::normalizeLongitude;
 
-constexpr double kPi = 3.14159265358979323846;
+// Zoom level 19 remains reasonable for imported street-detail map packages.
+constexpr int kMaximumDisplayZoom = 19;
 constexpr int kTile = signalforge::core::kMapTileSize;
 constexpr int kMaxCachedTiles = 256;
 
-double latitudeFromY(double y, int zoom) {
-    const double n = kPi * (1.0 - 2.0 * y / worldSize(zoom));
-    return std::atan(std::sinh(n)) * 180.0 / kPi;
-}
-
+ // helper no longer needed; inverse projection now lives in the core
 int wrapTile(int x, int size) {
     return ((x % size) + size) % size;
 }
@@ -194,21 +191,28 @@ protected:
 
         const double mapSize = worldSize(zoom_);
         const MapPixel center = toWorldPixel(centerLatitude_, centerLongitude_, zoom_);
-        const int tilesPerAxis = 1 << zoom_;
+        // Allow zooming beyond the highest native tile level without losing
+        // the map. This is visual overzoom only: it CANNOT add road or imagery
+        // detail that is not present in the underlying MBTiles package.
+        const int sourceZoom = hasMap_ ? std::min(zoom_, maxZoom_) : zoom_;
+        const int tilesPerAxis = 1 << sourceZoom;
+        const double scale = std::ldexp(1.0, zoom_ - sourceZoom);
+        const double sourceTileSpan = kTile * scale;
         const double originX = center.x - width() / 2.0;
         const double originY = center.y - height() / 2.0;
-        const int x0 = static_cast<int>(std::floor(originX / kTile));
-        const int y0 = static_cast<int>(std::floor(originY / kTile));
-        const int x1 = static_cast<int>(std::ceil((originX + width()) / kTile));
-        const int y1 = static_cast<int>(std::ceil((originY + height()) / kTile));
+        const int x0 = static_cast<int>(std::floor(originX / sourceTileSpan));
+        const int y0 = static_cast<int>(std::floor(originY / sourceTileSpan));
+        const int x1 = static_cast<int>(std::ceil((originX + width()) / sourceTileSpan));
+        const int y1 = static_cast<int>(std::ceil((originY + height()) / sourceTileSpan));
 
         for (int y = y0; y <= y1; ++y) {
             if (y < 0 || y >= tilesPerAxis) continue;
             for (int x = x0; x <= x1; ++x) {
-                const QRectF target(x * kTile - originX, y * kTile - originY,
-                                    kTile, kTile);
+                const QRectF target(x * sourceTileSpan - originX,
+                                    y * sourceTileSpan - originY,
+                                    sourceTileSpan, sourceTileSpan);
                 const QImage tile = hasMap_ ?
-                    tileImage(zoom_, wrapTile(x, tilesPerAxis), y) : QImage();
+                    tileImage(sourceZoom, wrapTile(x, tilesPerAxis), y) : QImage();
                 if (!tile.isNull()) {
                     painter.drawImage(target, tile);
                 } else {
@@ -287,20 +291,28 @@ protected:
                          QColor(5, 16, 26, 215));
         painter.setPen(QColor(240, 244, 246));
         painter.setFont(QFont("Sans Serif", 8));
+        const bool enlarged = hasMap_ && zoom_ > maxZoom_;
+        const QString detail = enlarged
+            ? QString("  UPSCALED from Z%1 - no added detail").arg(maxZoom_)
+            : QString();
+        const QString focus = cursorOverMap_ ? "Cursor" : "Center";
         painter.drawText(QRect(7, height() - 20, width() - 14, 18),
                          Qt::AlignVCenter,
-                         QString("Lat %1  Lon %2   Zoom %3  %4")
-                           .arg(centerLatitude_, 0, 'f', 4)
-                           .arg(centerLongitude_, 0, 'f', 4)
+                         QString("%1: %2°  %3°   Z%4%5")
+                           .arg(focus)
+                           .arg(cursorOverMap_ ? cursorLatitude_ : centerLatitude_, 0, 'f', 5)
+                           .arg(cursorOverMap_ ? cursorLongitude_ : centerLongitude_, 0, 'f', 5)
                            .arg(zoom_)
-                           .arg(hasMap_ ? mapName_ : "No base map"));
+                           .arg(detail));
     }
 
     void wheelEvent(QWheelEvent* event) override {
         if (!hasMap_) { event->accept(); return; }
         const int delta = event->angleDelta().y();
         if (delta) {
-            zoom_ = std::clamp(zoom_ + (delta > 0 ? 1 : -1), minZoom_, maxZoom_);
+            zoom_ = std::clamp(zoom_ + (delta > 0 ? 1 : -1),
+                               minZoom_, kMaximumDisplayZoom);
+            if (cursorOverMap_) updateCursorCoordinates(lastMouse_);
             update();
         }
         event->accept();
@@ -316,17 +328,32 @@ protected:
     }
 
     void mouseMoveEvent(QMouseEvent* event) override {
-        if (!dragging_) return;
-        const QPointF difference = event->position() - lastMouse_;
-        lastMouse_ = event->position();
-        const MapPixel old = toWorldPixel(centerLatitude_, centerLongitude_, zoom_);
-        const double size = worldSize(zoom_);
-        const double x = std::fmod(old.x - difference.x() + size, size);
-        const double y = std::clamp(old.y - difference.y(), 0.0, size);
-        centerLongitude_ = normalizeLongitude(x / size * 360.0 - 180.0);
-        centerLatitude_ = latitudeFromY(y, zoom_);
+        const QPointF position = event->position();
+        if (dragging_) {
+            const QPointF difference = position - lastMouse_;
+            const MapPixel old = toWorldPixel(centerLatitude_, centerLongitude_, zoom_);
+            const double size = worldSize(zoom_);
+            double x = std::fmod(old.x - difference.x(), size);
+            if (x < 0) x += size;
+            const double y = std::clamp(old.y - difference.y(), 0.0, size);
+            const auto center = signalforge::core::fromWorldPixel({x, y}, zoom_);
+            centerLatitude_ = center.latitude;
+            centerLongitude_ = center.longitude;
+        }
+        updateCursorCoordinates(position);
+        lastMouse_ = position;
         update();
         event->accept();
+    }
+
+    void leaveEvent(QEvent* event) override {
+        cursorOverMap_ = false;
+        if (dragging_) {
+            dragging_ = false;
+            unsetCursor();
+        }
+        update();
+        QWidget::leaveEvent(event);
     }
 
     void mouseReleaseEvent(QMouseEvent* event) override {
@@ -338,6 +365,18 @@ protected:
     }
 
 private:
+    void updateCursorCoordinates(const QPointF& position) {
+        const MapPixel center = toWorldPixel(centerLatitude_, centerLongitude_, zoom_);
+        const double size = worldSize(zoom_);
+        const auto geo = signalforge::core::fromWorldPixel(
+            {center.x + position.x() - width() * 0.5,
+             std::clamp(center.y + position.y() - height() * 0.5, 0.0, size)},
+            zoom_);
+        cursorOverMap_ = true;
+        cursorLatitude_ = geo.latitude;
+        cursorLongitude_ = geo.longitude;
+    }
+
     QImage tileImage(int z, int x, int y) {
         const quint64 key = (quint64(z) << 42) |
                             (quint64(x) << 21) | quint64(y);
@@ -364,14 +403,17 @@ private:
     QString mapName_;
     int zoom_ = 7;
     int minZoom_ = 0;
-    int maxZoom_ = 19;
+    int maxZoom_ = 19;  // Highest native zoom level in the loaded file.
     bool tileSchemeXyz_ = false;
     bool hasMap_ = false;
     bool aircraft_ = true;
     bool aprs_ = false;
     bool customPin_ = false;
     bool dragging_ = false;
+    bool cursorOverMap_ = false;
     QPointF lastMouse_;
+    double cursorLatitude_ = 0.0;
+    double cursorLongitude_ = 0.0;
     double centerLatitude_ = 39.7392;
     double centerLongitude_ = -104.9903;
     double markerLatitude_ = 39.7392;
