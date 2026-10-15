@@ -4,7 +4,7 @@ Thanks for helping build **SignalForge — The Open-Source Radio Multitool**.
 
 > Forged by Operators. Built for Everyone.
 
-**Project state:** Early planning. Technical conventions and an open-source license are not final yet. Please discuss substantial features or third-party code integrations in an issue before investing heavily in changes.
+**Project state:** Early development. SignalForge-authored software is licensed under `GPL-3.0-or-later`. Technical conventions and third-party dependency audits are still evolving. Please discuss substantial features or third-party code integrations in an issue before investing heavily in changes.
 
 ## How we collaborate
 
