@@ -1,0 +1,53 @@
+name: Build and Test
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  linux:
+    name: Linux GUI and tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Qt
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qt6-base-dev
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
+      - name: Build
+        run: cmake --build build --parallel 2
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+  windows:
+    name: Windows GUI and tests
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.3'
+          arch: win64_msvc2022_64
+          cache: true
+      - name: Configure
+        run: cmake -S . -B build -DBUILD_TESTING=ON
+      - name: Build
+        run: cmake --build build --config Release --parallel 2
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+
+  core-only:
+    name: Core-only (no Qt)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S . -B build-core -DSIGNALFORGE_BUILD_GUI=OFF -DBUILD_TESTING=ON
+      - name: Build
+        run: cmake --build build-core --parallel 2
+      - name: Test
+        run: ctest --test-dir build-core --output-on-failure
