@@ -1,6 +1,7 @@
 #include "ui/MainWindow.h"
 
 #include "ui/OfflineMapWidget.h"
+#include "ui/ReceiverWidget.h"
 #include "ui/SpectrumWidget.h"
 
 #include <QAbstractItemView>
@@ -203,11 +204,7 @@ MainWindow::MainWindow(bool primaryWindow,
     addPanel("spectrum", "Spectrum / Waterfall", spectrumPanel(),
              Qt::LeftDockWidgetArea);
     addPanel("receivers", "Receivers",
-             demoTable("Synthetic devices — no physical hardware connected.",
-                 {"Receiver", "Center", "State"},
-                 {{"SIM-01", "155.000", "Demo"},
-                  {"SIM-02", "1090.000", "Demo"},
-                  {"SIM-03", "144.390", "Demo"}}),
+             new ReceiverWidget(),
              Qt::RightDockWidgetArea);
     addPanel("scanner", "Frequency Scanner",
              demoTable("Sample scan-list channels (MHz).",
@@ -257,7 +254,7 @@ MainWindow::MainWindow(bool primaryWindow,
     defaultGeometry_ = saveGeometry();
     if (primaryWindow_) restoreSession();
     statusBar()->showMessage(
-        "SIMULATION ONLY: all calls and markers are fictional. "
+        "RF signal display and call markers remain simulated. "
         "Real offline MBTiles supported. No SDR device connected.");
 }
 
@@ -357,7 +354,7 @@ void MainWindow::createMenus() {
             "Version 0.1.0 — Operator Interface Preview\n\n"
             "Spectrum, waterfall, calls and station positions are simulated. "
             "User-supplied offline MBTiles basemaps are real. "
-            "SDR hardware, receiver filters and protocol decoders "
+            "RTL-SDR hardware enumeration is available; IQ capture, receiver filters and decoders "
             "are not implemented yet.");
     });
 }
