@@ -67,6 +67,10 @@
 
 **Exit:** Advanced modules can be deployed without destabilizing core receiving and archive services.
 
+## Operator UI feedback tracked
+
+See [operator UI refinements issue #3](https://github.com/SamTheGreyWind/SignalForge/issues/3) for planned sharp/FFT-like waterfall styling, configurable VFO passband bandwidth, removable/resizable waterfall panels, and a panel-selection/empty-window workflow. These are future improvements, not part of the current demo. Offline-first GIS remains a cross-cutting design principle, beginning with a bundled raster MBTiles sample.
+
 ## Cross-cutting work at every phase
 
 Documentation, license review, privacy/security review, test fixtures, performance profiling, accessibility, Windows/Linux testing, hardware compatibility matrix, and issue-driven community feedback.
