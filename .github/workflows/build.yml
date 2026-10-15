@@ -45,6 +45,17 @@ jobs:
           New-Item -ItemType Directory -Force -Path preview | Out-Null
           Copy-Item "build/Release/SignalForge.exe" "preview/SignalForge.exe"
           windeployqt --release --no-translations --compiler-runtime "preview/SignalForge.exe"
+          # SQLite is a runtime plugin. Make its presence explicit in the
+          # extracted ZIP so offline maps also work on non-developer PCs.
+          $qtBin = Split-Path (Get-Command windeployqt).Source
+          $sqlitePlugin = Join-Path (Split-Path $qtBin -Parent) "plugins/sqldrivers/qsqlite.dll"
+          if (!(Test-Path $sqlitePlugin)) { throw "Missing Qt SQLite plugin: $sqlitePlugin" }
+          New-Item -ItemType Directory -Force -Path "preview/sqldrivers" | Out-Null
+          Copy-Item $sqlitePlugin "preview/sqldrivers/qsqlite.dll" -Force
+          python tools/generate_demo_mbtiles.py "preview/maps/SignalForge_Offline_GIS_Sample.mbtiles"
+          if (!(Test-Path "preview/maps/SignalForge_Offline_GIS_Sample.mbtiles")) {
+            throw "Bundled map generator did not create a file"
+          }
       - name: Upload Windows preview
         uses: actions/upload-artifact@v4
         with:
@@ -64,3 +75,5 @@ jobs:
         run: cmake --build build-core --parallel 2
       - name: Test
         run: ctest --test-dir build-core --output-on-failure
+      - name: Validate offline sample generation
+        run: python3 tools/generate_demo_mbtiles.py "${{ runner.temp }}/SignalForge_Offline_GIS_Sample.mbtiles"
