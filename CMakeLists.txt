@@ -8,7 +8,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(SIGNALFORGE_BUILD_GUI "Build the Qt 6 desktop application" ON)
 
-add_library(signalforge_core STATIC src/core/Frequency.cpp)
+add_library(signalforge_core STATIC src/core/Frequency.cpp src/core/WebMercator.cpp)
 target_include_directories(signalforge_core PUBLIC src)
 target_compile_features(signalforge_core PUBLIC cxx_std_20)
 if(MSVC)
@@ -22,10 +22,13 @@ if(BUILD_TESTING)
     add_executable(signalforge_core_tests tests/FrequencyTests.cpp)
     target_link_libraries(signalforge_core_tests PRIVATE signalforge_core)
     add_test(NAME signalforge_core_tests COMMAND signalforge_core_tests)
+    add_executable(signalforge_map_projection_tests tests/MapProjectionTests.cpp)
+    target_link_libraries(signalforge_map_projection_tests PRIVATE signalforge_core)
+    add_test(NAME signalforge_map_projection_tests COMMAND signalforge_map_projection_tests)
 endif()
 
 if(SIGNALFORGE_BUILD_GUI)
-    find_package(Qt6 6.4 REQUIRED COMPONENTS Widgets)
+    find_package(Qt6 6.4 REQUIRED COMPONENTS Widgets Sql)
     add_executable(SignalForge WIN32
         src/app/main.cpp
         src/ui/MainWindow.h
@@ -34,8 +37,10 @@ if(SIGNALFORGE_BUILD_GUI)
         src/ui/SpectrumWidget.cpp
         src/ui/DemoMapWidget.h
         src/ui/DemoMapWidget.cpp
+        src/ui/OfflineMapWidget.h
+        src/ui/OfflineMapWidget.cpp
     )
-    target_link_libraries(SignalForge PRIVATE signalforge_core Qt6::Widgets)
+    target_link_libraries(SignalForge PRIVATE signalforge_core Qt6::Widgets Qt6::Sql)
     target_include_directories(SignalForge PRIVATE src)
     set_target_properties(SignalForge PROPERTIES MACOSX_BUNDLE TRUE)
 endif()
