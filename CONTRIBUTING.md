@@ -28,4 +28,4 @@ Respect spectrum regulations, privacy, content rights and the service rules for 
 
 ## Licensing note
 
-SignalForge intends to use an open-source license, but a LICENSE file has not yet been adopted. Contributions are not being solicited under an undefined license: before accepting nontrivial external code contributions, maintainers will select and publish the governing license and contribution terms.
+The SignalForge software project is licensed under **GPL-3.0-or-later**; see [LICENSE](LICENSE). Submit code contributions only if you have the rights to offer them under these terms. By submitting a contribution for inclusion, you agree that your contribution may be distributed under GPL-3.0-or-later, unless a different license for a specific asset has been explicitly agreed to and documented. You retain ownership of your contributions; no contributor license agreement or copyright assignment is currently required. Document the license and provenance of third-party material before adding it. Public-domain map data and third-party Qt runtime libraries are not relicensed by SignalForge's repository license.
