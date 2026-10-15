@@ -29,4 +29,16 @@ MapPixel toWorldPixel(double latitude, double longitude, int zoom) noexcept {
     return { x, std::clamp(y, 0.0, size) };
 }
 
+GeoCoordinate fromWorldPixel(MapPixel pixel, int zoom) noexcept {
+    const double size = worldSize(zoom);
+    const double x = std::isfinite(pixel.x) ? pixel.x : size * 0.5;
+    const double y = std::isfinite(pixel.y)
+        ? std::clamp(pixel.y, 0.0, size) : size * 0.5;
+    const double n = kPi * (1.0 - 2.0 * y / size);
+    return {
+        std::atan(std::sinh(n)) * 180.0 / kPi,
+        normalizeLongitude(x / size * 360.0 - 180.0)
+    };
+}
+
 }  // namespace signalforge::core
