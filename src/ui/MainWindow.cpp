@@ -1,10 +1,16 @@
 #include "ui/MainWindow.h"
 
+#include "ui/DemoMapWidget.h"
+#include "ui/SpectrumWidget.h"
+
+#include <QAbstractItemView>
 #include <QAction>
+#include <QCheckBox>
 #include <QCloseEvent>
 #include <QDockWidget>
 #include <QFont>
-#include <QFrame>
+#include <QHeaderView>
+#include <QHBoxLayout>
 #include <QInputDialog>
 #include <QKeySequence>
 #include <QLabel>
@@ -12,18 +18,57 @@
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QPoint>
 #include <QSettings>
 #include <QStatusBar>
 #include <QStringList>
+#include <QTableWidget>
+#include <QTableWidgetItem>
 #include <QVBoxLayout>
 #include <QWidget>
 
 namespace signalforge::ui {
+namespace {
 
-MainWindow::MainWindow(QWidget* parent)
-    : QMainWindow(parent) {
+// Display-only sample data. Tables do not represent radio decoding or a
+// persistence layer and should never be confused with live traffic.
+QWidget* demoTable(const QString& caption,
+                   const QStringList& headers,
+                   const QList<QStringList>& rows) {
+    auto* container = new QWidget;
+    auto* layout = new QVBoxLayout(container);
+    auto* note = new QLabel("DEMO DATA — NOT LIVE\n" + caption, container);
+    note->setWordWrap(true);
+    layout->addWidget(note);
+
+    auto* table = new QTableWidget(rows.size(), headers.size(), container);
+    table->setHorizontalHeaderLabels(headers);
+    table->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    table->setSelectionBehavior(QAbstractItemView::SelectRows);
+    table->setSelectionMode(QAbstractItemView::SingleSelection);
+    table->setAlternatingRowColors(true);
+    table->verticalHeader()->hide();
+    table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    table->setShowGrid(false);
+    for (int row = 0; row < rows.size(); ++row) {
+        for (int column = 0; column < headers.size(); ++column) {
+            const QString value = column < rows[row].size() ?
+                rows[row][column] : QString();
+            table->setItem(row, column, new QTableWidgetItem(value));
+        }
+    }
+    layout->addWidget(table, 1);
+    return container;
+}
+
+}  // namespace
+
+MainWindow::MainWindow(bool primaryWindow, QWidget* parent)
+    : QMainWindow(parent), primaryWindow_(primaryWindow) {
     setObjectName("signalforge.main");
-    setWindowTitle("SignalForge — The Open-Source Radio Multitool");
+    setWindowTitle(primaryWindow_
+        ? "SignalForge — The Open-Source Radio Multitool"
+        : "SignalForge — Additional Workspace (Demo)");
     resize(1360, 820);
     setDockOptions(QMainWindow::AllowNestedDocks |
                    QMainWindow::AllowTabbedDocks |
@@ -31,68 +76,92 @@ MainWindow::MainWindow(QWidget* parent)
 
     auto* workspace = new QWidget(this);
     auto* layout = new QVBoxLayout(workspace);
-    layout->setContentsMargins(24, 24, 24, 24);
+    layout->setContentsMargins(12, 12, 12, 12);
 
+    auto* headline = new QHBoxLayout();
     auto* title = new QLabel("SignalForge", workspace);
     QFont titleFont = title->font();
-    titleFont.setPointSize(22);
+    titleFont.setPointSize(19);
     titleFont.setBold(true);
     title->setFont(titleFont);
+    headline->addWidget(title);
 
-    auto* subtitle = new QLabel("Forged by Operators. Built for Everyone.", workspace);
-    auto* spectrum = new QLabel(
-        "Spectrum / Waterfall\n\nNo SDR connected.\n"
-        "Live RF acquisition and the visual VFO are planned for a future milestone.",
-        workspace);
-    spectrum->setAlignment(Qt::AlignCenter);
-    spectrum->setWordWrap(true);
-    spectrum->setMinimumSize(480, 260);
-    spectrum->setFrameShape(QFrame::StyledPanel);
-    spectrum->setAccessibleName("Spectrum and waterfall placeholder");
+    headline->addStretch();
+    auto* runDemo = new QCheckBox("Animate demo", workspace);
+    runDemo->setChecked(true);
+    headline->addWidget(runDemo);
+    layout->addLayout(headline);
 
-    layout->addWidget(title);
+    auto* subtitle = new QLabel(
+        "Forged by Operators. Built for Everyone.   |   "
+        "Simulation only — click/drag the VFO; scroll to tune and pan.", workspace);
+    subtitle->setWordWrap(true);
     layout->addWidget(subtitle);
-    layout->addWidget(spectrum, 1);
+
+    spectrum_ = new SpectrumWidget(workspace);
+    layout->addWidget(spectrum_, 1);
+    connect(runDemo, &QCheckBox::toggled,
+            spectrum_, &SpectrumWidget::setRunning);
     setCentralWidget(workspace);
 
     addPanel("receivers", "Receivers",
-             "Receiver management will enumerate SDR devices and independently assigned tasks.",
+             demoTable("Synthetic devices — no physical hardware connected.",
+                 {"Receiver", "Center", "State"},
+                 {{"SIM-01", "155.000", "Demo"},
+                  {"SIM-02", "1090.000", "Demo"},
+                  {"SIM-03", "144.390", "Demo"}}),
              Qt::LeftDockWidgetArea);
+
     addPanel("scanner", "Frequency Scanner",
-             "Scan lists, range scans, and activity detection will appear here.",
+             demoTable("Sample scan-list channels (MHz).",
+                 {"Frequency", "Mode", "State"},
+                 {{"154.480", "NFM", "Idle"},
+                  {"154.840", "NFM", "Activity"},
+                  {"155.320", "NFM", "Hold"},
+                  {"155.770", "NFM", "Idle"}}),
              Qt::LeftDockWidgetArea);
 
     auto* p25 = addPanel("p25", "P25 Calls",
-             "P25 control/traffic channels, talkgroups, and live calls are not implemented yet.",
+             demoTable("Fictional talkgroups. No P25 received or decoded.",
+                 {"Time", "Talkgroup", "Status"},
+                 {{"12:04:18", "DEMO-FIRE", "Complete"},
+                  {"12:03:51", "DEMO-OPS", "Complete"},
+                  {"12:03:16", "DEMO-EMS", "Complete"},
+                  {"12:02:04", "DEMO-OPS", "Complete"}}),
              Qt::RightDockWidgetArea);
+
     auto* recordings = addPanel("recordings", "Recordings",
-             "Future call archive, search, retention and instant playback.",
+             demoTable("Illustrative archive only. Playback is not available.",
+                 {"Time", "Source", "Length"},
+                 {{"12:04:18", "DEMO-FIRE", "00:12"},
+                  {"12:03:51", "DEMO-OPS", "00:08"},
+                  {"12:03:16", "DEMO-EMS", "00:23"}}),
              Qt::RightDockWidgetArea);
     tabifyDockWidget(p25, recordings);
     p25->raise();
 
     auto* adsb = addPanel("adsb", "ADS-B Map",
-             "Independent aircraft tracking map; no aircraft data source is connected.",
+             new DemoMapWidget(true, false),
              Qt::BottomDockWidgetArea);
     auto* aprs = addPanel("aprs", "APRS Map",
-             "Independent APRS station and weather map; no packet decoder is connected.",
+             new DemoMapWidget(false, true),
              Qt::BottomDockWidgetArea);
     tabifyDockWidget(adsb, aprs);
     adsb->raise();
 
     createMenus();
     statusBar()->showMessage(
-        "Application foundation — SDR reception, decoding and mapping are not yet implemented.");
+        "Demo mode: synthetic RF, fictional calls and illustrated map positions. "
+        "No SDR or GPS input.");
 
-    // Save a known default before restoring the previously used layout.
     defaultState_ = saveState(1);
     defaultGeometry_ = saveGeometry();
-    restoreSession();
+    if (primaryWindow_) restoreSession();
 }
 
 QDockWidget* MainWindow::addPanel(const QString& id,
                                  const QString& title,
-                                 const QString& description,
+                                 QWidget* contents,
                                  Qt::DockWidgetArea area) {
     auto* dock = new QDockWidget(title, this);
     dock->setObjectName("signalforge.panel." + id);
@@ -100,22 +169,35 @@ QDockWidget* MainWindow::addPanel(const QString& id,
     dock->setFeatures(QDockWidget::DockWidgetClosable |
                       QDockWidget::DockWidgetMovable |
                       QDockWidget::DockWidgetFloatable);
-    auto* label = new QLabel(description, dock);
-    label->setWordWrap(true);
-    label->setAlignment(Qt::AlignCenter);
-    label->setMargin(16);
-    label->setMinimumWidth(170);
-    dock->setWidget(label);
+    dock->setWidget(contents);
     addDockWidget(area, dock);
     panels_.append(dock);
     return dock;
 }
 
+void MainWindow::openNewWindow() {
+    // No parent: independently movable, closable top-level application window.
+    // Closing the additional window frees it and does not close this workspace.
+    auto* window = new MainWindow(false);
+    window->setAttribute(Qt::WA_DeleteOnClose);
+    window->move(pos() + QPoint(56, 56));
+    window->show();
+    window->raise();
+}
+
 void MainWindow::createMenus() {
     auto* file = menuBar()->addMenu("&File");
-    auto* quit = file->addAction("&Quit");
-    quit->setShortcut(QKeySequence::Quit);
-    connect(quit, &QAction::triggered, this, [this] { close(); });
+    auto* newWindow = file->addAction("&New Window");
+    newWindow->setShortcut(QKeySequence::New);
+    connect(newWindow, &QAction::triggered,
+            this, [this] { openNewWindow(); });
+
+    file->addSeparator();
+    auto* close = file->addAction(primaryWindow_
+        ? "&Quit SignalForge" : "&Close Window");
+    close->setShortcut(primaryWindow_
+        ? QKeySequence::Quit : QKeySequence::Close);
+    connect(close, &QAction::triggered, this, [this] { close(); });
 
     auto* panelsMenu = menuBar()->addMenu("&Panels");
     for (auto* panel : panels_) {
@@ -135,11 +217,11 @@ void MainWindow::createMenus() {
     auto* about = help->addAction("&About SignalForge");
     connect(about, &QAction::triggered, this, [this] {
         QMessageBox::about(this, "About SignalForge",
-            "SignalForge 0.1.0 — Application Foundation\n\n"
+            "SignalForge 0.1.0 — Interactive Demo\n\n"
             "The Open-Source Radio Multitool\n"
             "Forged by Operators. Built for Everyone.\n\n"
-            "This is an early desktop shell. SDR hardware and decoder "
-            "backends have not been implemented.");
+            "All displayed signals, maps, receiver lists and calls are "
+            "simulated. SDR hardware and decoder backends are not implemented.");
     });
 }
 
@@ -161,17 +243,17 @@ void MainWindow::restoreSession() {
 
 void MainWindow::saveWorkspaceAs() {
     bool accepted = false;
-    QString name = QInputDialog::getText(
+    const QString name = QInputDialog::getText(
         this, "Save Workspace", "Workspace name:", QLineEdit::Normal,
         QString(), &accepted).trimmed();
-    if (!accepted || name.isEmpty()) {
-        return;
-    }
+    if (!accepted || name.isEmpty()) return;
+
     if (name.contains('/') || name.contains('\\')) {
         QMessageBox::warning(this, "Invalid name",
                              "Workspace names cannot contain slashes.");
         return;
     }
+
     QSettings settings;
     settings.beginGroup("workspaces");
     settings.beginGroup(name);
@@ -192,18 +274,19 @@ void MainWindow::loadWorkspace() {
                                  "No saved workspace layouts yet.");
         return;
     }
+
     bool accepted = false;
     const QString name = QInputDialog::getItem(
         this, "Load Workspace", "Workspace:", names, 0, false, &accepted);
-    if (!accepted || name.isEmpty()) {
-        return;
-    }
+    if (!accepted || name.isEmpty()) return;
+
     settings.beginGroup("workspaces");
     settings.beginGroup(name);
     const QByteArray geometry = settings.value("geometry").toByteArray();
     const QByteArray state = settings.value("state").toByteArray();
     settings.endGroup();
     settings.endGroup();
+
     if (!restoreState(state, 1)) {
         QMessageBox::warning(this, "Workspace",
                              "Could not restore this saved layout.");
@@ -220,7 +303,7 @@ void MainWindow::resetWorkspace() {
 }
 
 void MainWindow::closeEvent(QCloseEvent* event) {
-    saveSession();
+    if (primaryWindow_) saveSession();
     QMainWindow::closeEvent(event);
 }
 
