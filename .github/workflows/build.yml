@@ -44,6 +44,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path preview | Out-Null
           Copy-Item "build/Release/SignalForge.exe" "preview/SignalForge.exe"
+          Copy-Item "LICENSE" "preview/LICENSE"
           windeployqt --release --no-translations --compiler-runtime "preview/SignalForge.exe"
           # SQLite is a runtime plugin. Make its presence explicit in the
           # extracted ZIP so offline maps also work on non-developer PCs.
