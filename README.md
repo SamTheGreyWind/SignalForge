@@ -36,7 +36,7 @@ These are initial architecture decisions; dependencies, licenses and compatibili
 
 ## Building the early desktop shell
 
-See [Building SignalForge](docs/BUILDING.md) for Windows/Linux instructions. The current UI demonstrates detachable panels, independent windows, a synthetic spectrum/VFO and saved workspaces without RF reception.
+See [Building SignalForge](docs/BUILDING.md) for Windows/Linux instructions. The current UI demonstrates detachable panels, independent windows, a synthetic spectrum/VFO, saved workspaces and locally imported raster MBTiles maps without RF reception or live-position decoding.
 
 ## Project documents
 
