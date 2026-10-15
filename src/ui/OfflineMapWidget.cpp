@@ -3,6 +3,7 @@
 
 #include <QCheckBox>
 #include <QComboBox>
+#include <QCoreApplication>
 #include <QDir>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -435,14 +436,28 @@ OfflineMapWidget::OfflineMapWidget(bool aircraft, bool aprs, QWidget* parent)
 
 void OfflineMapWidget::refreshPackages(const QString& selected) {
     QSettings settings;
-    const QStringList paths = settings.value("maps/packages").toStringList();
+    QStringList paths = settings.value("maps/packages").toStringList();
+    // The preview archive ships with a local public-domain demo. It is
+    // discovered automatically, never copied into user settings or storage.
+    const QString bundled = QCoreApplication::applicationDirPath() +
+        "/maps/SignalForge_Offline_GIS_Sample.mbtiles";
+    const bool haveBundled = QFileInfo::exists(bundled);
+    if (haveBundled && !paths.contains(bundled)) paths.prepend(bundled);
     packages_->blockSignals(true);
     packages_->clear();
     packages_->addItem("(No offline base map)", QString());
-    for (const QString& path : paths)
-        packages_->addItem(QFileInfo(path).fileName(), path);
+    for (const QString& path : paths) {
+        const QString label = (haveBundled && path == bundled)
+            ? "Bundled sample — Natural Earth (offline)"
+            : QFileInfo(path).fileName();
+        packages_->addItem(label, path);
+    }
     int index = packages_->findData(selected);
     if (index < 0) index = 0;
+    // Auto-open bundled sample on FIRST use, not when an operator has
+    // explicitly chosen the empty map or an imported external package.
+    if (!settings.contains("maps/lastSelected") && haveBundled)
+        index = packages_->findData(bundled);
     packages_->setCurrentIndex(index);
     packages_->blockSignals(false);
     selectPackage(index);
@@ -480,6 +495,13 @@ void OfflineMapWidget::addPackage() {
 void OfflineMapWidget::removePackage() {
     const QString path = packages_->currentData().toString();
     if (path.isEmpty()) return;
+    const QString bundled = QCoreApplication::applicationDirPath() +
+        "/maps/SignalForge_Offline_GIS_Sample.mbtiles";
+    if (path == bundled && QFileInfo::exists(bundled)) {
+        status_->setText("The bundled map is part of the preview. "
+                         "Select 'No offline base map' to hide it.");
+        return;
+    }
     QSettings settings;
     QStringList paths = settings.value("maps/packages").toStringList();
     paths.removeAll(path);
