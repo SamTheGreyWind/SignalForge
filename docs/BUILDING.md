@@ -119,4 +119,4 @@ Note: saved layouts from the earlier preview may not restore after the central-w
 
 ## Known limitations
 
-No SDR device access, **real RF** waterfall, audio, live aircraft/APRS locations, TX or decoders are present. An imported MBTiles basemap is genuine georeferenced map data, but all RF/position overlays remain synthetic. Frequency offset utility tests exist but are not wired to drivers. Licensing and release packaging are pending.
+No SDR device access, **real RF** waterfall, audio, live aircraft/APRS locations, TX or decoders are present. An imported MBTiles basemap is genuine georeferenced map data, but all RF/position overlays remain synthetic. Frequency offset utility tests exist but are not wired to drivers. SignalForge-authored code is `GPL-3.0-or-later`; release packaging and third-party dependency/license notices need additional review before a general release.
