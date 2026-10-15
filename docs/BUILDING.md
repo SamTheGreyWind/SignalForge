@@ -14,6 +14,61 @@ This preview is **not an installer** and is not a signed release. Windows SmartS
 
 The current build provides a **Qt 6 desktop shell** with dockable/floating panels, named layouts, a moving **synthetic** spectrum/waterfall, sample monitoring tables, a genuine **offline raster MBTiles map reader**, and a small independently testable C++ core. **No hardware SDR reception or protocol decoding is implemented yet.**
 
+## Phase 1: RTL-SDR Blog V4 receiver discovery preview
+
+The **Receivers** dock now performs **real read-only device enumeration** using
+the public \`librtlsdr\` driver API. It can list multiple RTL-SDR receivers,
+including two RTL-SDR Blog V4 units, and reports their USB index, device name,
+USB product and serial number. This **does not open a device**, stream I/Q,
+tune frequencies, calculate real RF FFT samples or alter USB device settings.
+
+**V4 driver compatibility is essential.** The Blog V4 uses an R828D tuner and
+nonstandard RF routing that requires updated driver support. A generic/old DLL
+may successfully enumerate your dongles **yet receive incorrect signals**.
+Follow the manufacturer's guide:
+https://www.rtl-sdr.com/v4/
+RTL-SDR Blog's driver source/releases:
+https://github.com/rtlsdrblog/rtl-sdr-blog
+
+On Windows 11:
+
+1. Connect either or both V4 receivers to the computer. If they already work
+   in other SDR software, do not change their USB driver configuration.
+2. Use the **x64** RTL-SDR Blog V4-compatible driver runtime. The preview
+   intentionally **does not bundle** the third-party \`rtlsdr.dll\`. You may
+   place \`rtlsdr.dll\` plus any required matching dependency DLLs beside
+   \`SignalForge.exe\`, or click **Select V4 Driver DLL…** in Receivers and
+   browse to the full path of a trustworthy V4-compatible DLL. Do not mix x86
+   DLLs with the x64 SignalForge executable.
+3. Open **Receivers → Scan USB Devices**. Two connected devices should appear
+   as two rows, each with an index and a hardware USB serial number.
+4. If no devices appear despite a successfully loaded driver, check the
+   receiver's existing WinUSB/libusb setup, USB cable/hub, and whether another
+   application has exclusive access. Always follow RTL-SDR Blog's guidance
+   before changing operating-system USB drivers.
+5. If SignalForge reports duplicate/missing serials, the driver cannot safely
+   use the serial strings to restore persistent per-device assignments.
+   Distinguish the physical dongles before building persistent profiles.
+   Never automatically change EEPROM serials. Changes using \`rtl_eeprom\`
+   are a separate, explicit hardware-maintenance operation.
+
+On Linux, install a V4-compatible \`librtlsdr.so\` and set appropriate
+udev permissions before using discovery. **Select V4 Driver DLL…** can also
+load an explicitly chosen shared library file, despite the generic button
+label.
+
+**Security/licensing:** The driver path is user-configured and persisted;
+the application loads native executable code from that location. Only use
+a trusted driver build. The core's Qt-free discovery adapter uses runtime
+dynamic library lookup so CI does not download or redistribute a proprietary
+or unreviewed driver binary. Its C API and dual-device serial identification
+are exercised through a **fake library fixture in CTest**, without any RF
+hardware. Any actual driver bundling is subject to a further licensing audit.
+
+**Next planned increment:** separate per-dongle receiver sessions, sample
+rate and tuning controls, bounded I/Q streams, actual FFT/waterfall rendering,
+and clean start/stop/disconnect logic; analog demodulation follows afterward.
+
 ## Requirements
 
 - CMake 3.21 or newer.
