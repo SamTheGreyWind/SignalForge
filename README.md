@@ -6,7 +6,7 @@
 
 SignalForge is a community-oriented, modular software-defined radio (SDR) workstation. Its goal is to combine interactive spectrum exploration, multi-receiver monitoring, protocol decoding, recording and replay, alerts, and mapping in a customizable desktop environment.
 
-**Status:** Early planning / architecture. The software described below is a roadmap, **not yet an implemented application**.
+**Status:** Early development. A minimal Qt desktop shell, basic core utilities and tests are available; SDR reception, decoding and mapping remain planned features.
 
 ## What we are building
 
@@ -33,6 +33,10 @@ See [Product requirements](docs/PRODUCT_REQUIREMENTS.md) for the full feature in
 | Storage | Separate SQLite-backed stores per feature domain, with optional federated views |
 
 These are initial architecture decisions; dependencies, licenses and compatibility must be validated before being adopted.
+
+## Building the early desktop shell
+
+See [Building SignalForge](docs/BUILDING.md) for Windows/Linux instructions. The current UI demonstrates detachable panels and saved workspaces without RF reception.
 
 ## Project documents
 
