@@ -1,6 +1,6 @@
 #include "ui/MainWindow.h"
 
-#include "ui/DemoMapWidget.h"
+#include "ui/OfflineMapWidget.h"
 #include "ui/SpectrumWidget.h"
 
 #include <QAbstractItemView>
@@ -141,18 +141,18 @@ MainWindow::MainWindow(bool primaryWindow, QWidget* parent)
     p25->raise();
 
     auto* adsb = addPanel("adsb", "ADS-B Map",
-             new DemoMapWidget(true, false),
+             new OfflineMapWidget(true, false),
              Qt::BottomDockWidgetArea);
     auto* aprs = addPanel("aprs", "APRS Map",
-             new DemoMapWidget(false, true),
+             new OfflineMapWidget(false, true),
              Qt::BottomDockWidgetArea);
     tabifyDockWidget(adsb, aprs);
     adsb->raise();
 
     createMenus();
     statusBar()->showMessage(
-        "Demo mode: synthetic RF, fictional calls and illustrated map positions. "
-        "No SDR or GPS input.");
+        "Demo mode: synthetic RF and fictional calls. Maps load offline MBTiles; "
+        "geographic symbols are simulated. No SDR or GPS input.");
 
     defaultState_ = saveState(1);
     defaultGeometry_ = saveGeometry();
@@ -220,8 +220,9 @@ void MainWindow::createMenus() {
             "SignalForge 0.1.0 — Interactive Demo\n\n"
             "The Open-Source Radio Multitool\n"
             "Forged by Operators. Built for Everyone.\n\n"
-            "All displayed signals, maps, receiver lists and calls are "
-            "simulated. SDR hardware and decoder backends are not implemented.");
+            "All displayed signals, station positions, receiver lists and calls are "
+            "simulated. Georeferenced raster MBTiles basemaps can be loaded locally; "
+            "SDR hardware and decoder backends are not implemented.");
     });
 }
 
