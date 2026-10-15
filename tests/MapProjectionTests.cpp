@@ -27,6 +27,19 @@ int main() {
     const auto south = toWorldPixel(-90, 0, 1);
     assertClose(north.y, 0, "north clamp", failures);
     assertClose(south.y, 512, "south clamp", failures);
+    const auto atlanta = toWorldPixel(33.749, -84.388, 12);
+    const auto restored = fromWorldPixel(atlanta, 12);
+    assertClose(restored.latitude, 33.749, "latitude round-trip", failures);
+    assertClose(restored.longitude, -84.388, "longitude round-trip", failures);
+    const auto cursor = fromWorldPixel({atlanta.x + 256.0,
+                                       atlanta.y + 256.0}, 12);
+    if (!(cursor.latitude < restored.latitude &&
+          cursor.longitude > restored.longitude)) {
+        std::cerr << "FAIL cursor southeast direction\n";
+        ++failures;
+    }
+    const auto wrapped = fromWorldPixel({worldSize(2) + 256, 512}, 2);
+    assertClose(wrapped.longitude, -90, "wrapped inverse longitude", failures);
     const auto anti = toWorldPixel(0, 180, 2);
     assertClose(anti.x, 0, "antimeridian wrap", failures);
     return failures == 0 ? 0 : 1;
