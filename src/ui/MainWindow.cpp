@@ -4,9 +4,11 @@
 #include <QCloseEvent>
 #include <QDockWidget>
 #include <QFont>
+#include <QFrame>
 #include <QInputDialog>
 #include <QKeySequence>
 #include <QLabel>
+#include <QLineEdit>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
