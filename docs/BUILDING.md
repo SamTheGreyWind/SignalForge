@@ -85,9 +85,19 @@ The base map's pixel positions and test markers use the same WGS84 latitude/long
 
 The bundled example uses generalized Natural Earth public-domain coastline/boundary data. Other map packages are user-supplied files with their own licenses. Users deploying this in commercial or governmental settings are responsible for reviewing map/imagery attribution, distribution rights, and retention/security policy. Avoid importing untrusted large files; future versions will add richer format support and map-package validation.
 
+## Operator UI preview updates
+
+- **Sharpened spectrum/waterfall:** the RF demo now draws jagged, bin-like synthetic power samples instead of rounded Gaussian-only hills. The waterfall uses a hard-pixel dark-blue → cyan → yellow → orange/red heat palette. These are simulated RF shapes, **not captured I/Q FFT samples**.
+- **VFO filter band:** the amber center marker has a translucent passband; left/right amber edges change the filter width symmetrically when dragged. Mode presets (WFM, NFM, AM, USB, LSB, CW) provide **illustrative** bandwidths, and the **Filter** spinbox accepts a custom value. The filter is **visual only**, not yet connected to a demodulator. The 2.4 MHz screen span is separate from the VFO filter width. Very narrow bands are easier to adjust numerically.
+- **Moveable/removable waterfall:** Spectrum / Waterfall is a normal dockable panel, not the permanent central widget. Drag to dock or float, resize, close/hide, and restore with **Panels → Spectrum / Waterfall** or the **Panels** toolbar.
+- **New window picker:** use **File → New Window…** or **Ctrl+N** to choose **Empty Workspace** or a starting panel. Each additional top-level window is independently moveable and has its own set of panel views; turn additional views on from its **Panels** menu or toolbar. Secondary windows do not overwrite the primary window's last-session layout.
+- **Window presets:** the current named workspace layouts can be saved/loaded from any window. Automatically recreating all secondary windows at startup and creating multiple copies of the *same panel type within one window* remain future enhancements.
+
+Note: saved layouts from the earlier preview may not restore after the central-waterfall → dockable-waterfall migration. Use **Workspaces → Reset to Default**, then save a new named layout. The existing offline MBTiles viewer and cursor-coordinate behavior remain available.
+
 ## Workspaces and panels
 
-- Drag panel title bars to dock, tab or float; floating panels can move to other monitors.
+- Drag panel title bars (including Spectrum / Waterfall) to dock, tab or float; floating panels can move to other monitors.
 - Use **Panels** to show/hide a dock.
 - Use **Workspaces > Save Layout As** to name a layout, and **Load Layout** to restore it.
 - The last session's layout is saved on exit.
