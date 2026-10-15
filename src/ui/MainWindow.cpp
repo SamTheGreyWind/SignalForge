@@ -9,6 +9,7 @@
 #include <QCloseEvent>
 #include <QComboBox>
 #include <QDoubleSpinBox>
+#include <QDockWidget>
 #include <QFont>
 #include <QHeaderView>
 #include <QHBoxLayout>
