@@ -72,8 +72,8 @@ SpectrumWidget::SpectrumWidget(QWidget* parent)
     setMinimumSize(290, 185);
     setMouseTracking(true);
     setAccessibleName("Simulated FFT-style spectrum and waterfall with bandwidth-aware VFO");
-    setToolTip("DEMO ONLY: click or drag the VFO to tune; drag orange filter edges "
-               "to change bandwidth; scroll to pan in 25 kHz increments.");
+    setToolTip("DEMO: Ctrl+wheel zooms about cursor; wheel tunes; click/drag VFO; "
+               "drag amber filter edges for bandwidth. Span and filter are independent.");
     history_.fill(QColor(4, 15, 51));
     connect(&timer_, &QTimer::timeout, this, [this] {
         ++frame_;
@@ -101,6 +101,35 @@ void SpectrumWidget::setPassbandHz(qint64 hz) {
 
 void SpectrumWidget::setBandwidthChangedHandler(std::function<void(qint64)> onChange) {
     bandwidthChanged_ = std::move(onChange);
+}
+
+void SpectrumWidget::setSpanHz(qint64 span, double anchor) {
+    const qint64 nextSpan = std::clamp(span, kMinSpanHz, kMaxSpanHz);
+    if (nextSpan == spanHz_) return;
+    anchor = std::clamp(anchor, 0.0, 1.0);
+
+    // Keep the RF frequency under the cursor at the same screen position.
+    const double frequencyAtAnchor = static_cast<double>(centerHz_) +
+        (anchor - 0.5) * static_cast<double>(spanHz_);
+    const double proposedCenter = frequencyAtAnchor -
+        (anchor - 0.5) * static_cast<double>(nextSpan);
+    centerHz_ = static_cast<qint64>(std::llround(std::max(
+        proposedCenter, static_cast<double>(nextSpan) * 0.5)));
+    spanHz_ = nextSpan;
+
+    // Old raster columns were indexed by the prior frequency span. Clear
+    // rather than display mislabeled historical RF data after changing zoom.
+    history_.fill(QColor(4, 15, 51));
+    for (int i = 0; i < 8; ++i) {
+        ++frame_;
+        addScanline();
+    }
+    if (spanChanged_) spanChanged_(spanHz_);
+    update();
+}
+
+void SpectrumWidget::setSpanChangedHandler(std::function<void(qint64)> onChange) {
+    spanChanged_ = std::move(onChange);
 }
 
 double SpectrumWidget::powerAt(int bin) const {
@@ -323,8 +352,19 @@ void SpectrumWidget::panToFrequency(qint64 newCenter) {
 void SpectrumWidget::wheelEvent(QWheelEvent* event) {
     const int steps = event->angleDelta().y() / 120;
     if (steps != 0) {
-        vfoHz_ = std::max<qint64>(0, vfoHz_ + steps * 25'000LL);
-        panToFrequency(vfoHz_);
+        if (event->modifiers() & Qt::ControlModifier) {
+            const QRect plot = plotBounds();
+            const double anchor = std::clamp(
+                (event->position().x() - plot.left()) /
+                static_cast<double>(std::max(1, plot.width())), 0.0, 1.0);
+            const qint64 requested = static_cast<qint64>(std::llround(
+                static_cast<double>(spanHz_) * std::pow(0.75, steps)));
+            setSpanHz(requested, anchor);
+        } else {
+            // Preserve existing wheel-to-tune behavior for demo operators.
+            vfoHz_ = std::max<qint64>(0, vfoHz_ + steps * 25'000LL);
+            panToFrequency(vfoHz_);
+        }
         event->accept();
         return;
     }
