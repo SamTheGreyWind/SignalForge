@@ -1,5 +1,17 @@
 # Building SignalForge (early application shell)
 
+## Windows preview without development tools
+
+For pull requests that include the GitHub Actions workflow, you can download a packaged Windows preview:
+
+1. Open the pull request's **Checks** tab, or go to the repository's **Actions** tab.
+2. Open the most recent successful **Build and Test** workflow run for the pull request.
+3. Scroll to **Artifacts** and download **SignalForge-Windows-Preview** (GitHub may require sign-in).
+4. Extract the downloaded ZIP to a folder; preserve its Qt DLLs and `platforms` subfolder.
+5. Double-click `SignalForge.exe`.
+
+This preview is **not an installer** and is not a signed release. Windows SmartScreen may warn about unfamiliar unsigned applications. Only run artifacts from workflow runs you trust. Its panels are currently placeholders, and no SDR hardware functions are implemented.
+
 The current build provides a **Qt 6 desktop shell** with dockable/floating panels, named layouts and a small independently testable C++ core. **No hardware SDR reception, spectrum plotting or protocol decoding is implemented yet.**
 
 ## Requirements
