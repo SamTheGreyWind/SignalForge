@@ -5,7 +5,7 @@
 ## Phase 0 — Establish the project
 
 - Publish README, requirements, architecture and contribution process.
-- Select a specific open-source license after reviewing third-party dependencies.
+- **Selected:** GPL-3.0-or-later for SignalForge-authored software. Continue the third-party dependency and redistribution/license audit before general releases.
 - Set up CMake, formatting, tests, CI and issue templates.
 - Agree on a small reference hardware list and sample I/Q fixtures.
 
@@ -66,6 +66,10 @@
 - Consider remote/headless service operation and macOS builds.
 
 **Exit:** Advanced modules can be deployed without destabilizing core receiving and archive services.
+
+## Operator UI feedback tracked
+
+See [operator UI refinements issue #3](https://github.com/SamTheGreyWind/SignalForge/issues/3) for planned sharp/FFT-like waterfall styling, configurable VFO passband bandwidth, removable/resizable waterfall panels, and a panel-selection/empty-window workflow. These are future improvements, not part of the current demo. Offline-first GIS remains a cross-cutting design principle, beginning with a bundled raster MBTiles sample.
 
 ## Cross-cutting work at every phase
 

@@ -1,0 +1,20 @@
+# Build output
+/build/
+/build-*/
+/cmake-build-*/
+/out/
+/CMakeFiles/
+/CMakeCache.txt
+/Testing/
+compile_commands.json
+CMakeUserPresets.json
+
+# IDE-specific files
+.vs/
+.idea/
+*.user
+*.suo
+
+# OS-specific files
+.DS_Store
+Thumbs.db

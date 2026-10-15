@@ -1,0 +1,80 @@
+name: Build and Test
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  linux:
+    name: Linux GUI and tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Qt
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qt6-base-dev
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
+      - name: Build
+        run: cmake --build build --parallel 2
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+  windows:
+    name: Windows GUI and tests
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.3'
+          arch: win64_msvc2022_64
+          cache: true
+      - name: Configure
+        run: cmake -S . -B build -DBUILD_TESTING=ON
+      - name: Build
+        run: cmake --build build --config Release --parallel 2
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+      - name: Package Windows preview
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path preview | Out-Null
+          Copy-Item "build/Release/SignalForge.exe" "preview/SignalForge.exe"
+          Copy-Item "LICENSE" "preview/LICENSE"
+          windeployqt --release --no-translations --compiler-runtime "preview/SignalForge.exe"
+          # SQLite is a runtime plugin. Make its presence explicit in the
+          # extracted ZIP so offline maps also work on non-developer PCs.
+          $qtBin = Split-Path (Get-Command windeployqt).Source
+          $sqlitePlugin = Join-Path (Split-Path $qtBin -Parent) "plugins/sqldrivers/qsqlite.dll"
+          if (!(Test-Path $sqlitePlugin)) { throw "Missing Qt SQLite plugin: $sqlitePlugin" }
+          New-Item -ItemType Directory -Force -Path "preview/sqldrivers" | Out-Null
+          Copy-Item $sqlitePlugin "preview/sqldrivers/qsqlite.dll" -Force
+          python tools/generate_demo_mbtiles.py "preview/maps/SignalForge_Offline_GIS_Sample.mbtiles"
+          if (!(Test-Path "preview/maps/SignalForge_Offline_GIS_Sample.mbtiles")) {
+            throw "Bundled map generator did not create a file"
+          }
+      - name: Upload Windows preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: SignalForge-Windows-Preview
+          path: preview/
+          if-no-files-found: error
+          retention-days: 14
+
+  core-only:
+    name: Core-only (no Qt)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S . -B build-core -DSIGNALFORGE_BUILD_GUI=OFF -DBUILD_TESTING=ON
+      - name: Build
+        run: cmake --build build-core --parallel 2
+      - name: Test
+        run: ctest --test-dir build-core --output-on-failure
+      - name: Validate offline sample generation
+        run: python3 tools/generate_demo_mbtiles.py "${{ runner.temp }}/SignalForge_Offline_GIS_Sample.mbtiles"

@@ -10,7 +10,7 @@ This document records initial choices for the modular Windows-first, Linux-compa
 - **Modules own their processing and data.** P25, ADS-B, APRS, SAME, satellites, scanner, CW, TV and TX are independent capabilities behind defined interfaces.
 - **Panels are views, not receivers.** Multiple panels can observe a single decoder without duplicating processing or retuning hardware.
 - **Separate persistence by default.** Domain-specific SQLite databases and external media files (audio/IQ/images) live behind storage adapters. A combined read-only query interface can federate events when enabled.
-- **Maps are composable views.** ADS-B and APRS have separate source data and layers. One or more map panels can independently choose which layers to show.
+- **Maps are composable, offline-first views.** ADS-B and APRS have separate source data and layers. Map panels can independently choose layers and locally available map packages. Initial raster MBTiles and WGS84/Web Mercator support is a preview; future GIS drivers should support users' own data and georeferenced mapping in commercial/government deployments.
 - **No mandatory network requirement.** Remote uploads and email are opt-in integrations, not prerequisites to receive and decode.
 - **Explicit legal and safety constraints.** TX must require manual enabling, capability and frequency checks; encrypted traffic is not bypassed.
 
