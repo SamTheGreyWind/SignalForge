@@ -193,11 +193,11 @@ void MainWindow::createMenus() {
             this, [this] { openNewWindow(); });
 
     file->addSeparator();
-    auto* close = file->addAction(primaryWindow_
+    auto* closeAction = file->addAction(primaryWindow_
         ? "&Quit SignalForge" : "&Close Window");
-    close->setShortcut(primaryWindow_
+    closeAction->setShortcut(primaryWindow_
         ? QKeySequence::Quit : QKeySequence::Close);
-    connect(close, &QAction::triggered, this, [this] { close(); });
+    connect(closeAction, &QAction::triggered, this, [this] { this->close(); });
 
     auto* panelsMenu = menuBar()->addMenu("&Panels");
     for (auto* panel : panels_) {
