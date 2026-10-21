@@ -2,6 +2,7 @@
 
 #include "ui/OfflineMapWidget.h"
 #include "ui/ReceiverWidget.h"
+#include "core/RtlIqReceiver.h"
 #include "ui/SpectrumWidget.h"
 
 #include <QAbstractItemView>
@@ -31,6 +32,7 @@
 #include <QTableWidgetItem>
 #include <QToolBar>
 #include <QToolButton>
+#include <QTimer>
 #include <QVBoxLayout>
 #include <QWidget>
 
@@ -143,8 +145,9 @@ QWidget* spectrumPanel() {
         span->setValue(static_cast<double>(hz) / 1'000'000.0);
     });
     auto* hint = new QLabel(
-        "DEMO: Ctrl+wheel zooms at cursor; wheel tunes; click/drag VFO; "
-        "drag amber edges to adjust filter. No live RF.",
+        "REAL IQ when RX started in Receivers; otherwise SIMULATED. "
+        "Ctrl+wheel zooms display; wheel retunes live RF in 25 kHz steps. "
+        "Filter width is visual only; audio/demodulation not yet available.",
         panel);
     hint->setWordWrap(true);
     layout->addWidget(hint);
@@ -175,6 +178,34 @@ QWidget* spectrumPanel() {
         if (!*applyingModePreset)
             modes->setCurrentIndex(modes->count() - 1);
     });
+
+    const auto engine = signalforge::core::sharedRtlIqReceiver();
+    widget->setRetuneHandler([engine](qint64 hz) {
+        if (hz >= 24'000'000 && hz <= 1'700'000'000)
+            engine->retune(static_cast<std::uint32_t>(hz));
+    });
+    // The engine runs even when this panel is hidden or closed. Each spectrum
+    // is a subscriber to the latest real FFT snapshot, never the device owner.
+    auto lastFftFrame = std::make_shared<std::uint64_t>(0);
+    auto* poll = new QTimer(panel);
+    poll->setInterval(85);
+    QObject::connect(poll, &QTimer::timeout, panel,
+       [widget, span, animate, engine, lastFftFrame] {
+        const auto state = engine->snapshot();
+        if (state.receiving && !state.power.empty()) {
+            if (state.fftFrames != *lastFftFrame) {
+                *lastFftFrame = state.fftFrames;
+                widget->setLiveFrame(state.power, state.centerHz, state.sampleRate);
+            }
+            span->setMaximum(static_cast<double>(state.sampleRate) / 1'000'000.0);
+            animate->setEnabled(false);
+        } else if (!state.receiving) {
+            widget->leaveLiveMode();
+            span->setMaximum(12.0);
+            animate->setEnabled(true);
+        }
+    });
+    poll->start();
     return panel;
 }
 
@@ -254,7 +285,7 @@ MainWindow::MainWindow(bool primaryWindow,
     defaultGeometry_ = saveGeometry();
     if (primaryWindow_) restoreSession();
     statusBar()->showMessage(
-        "RF signal display and call markers remain simulated. "
+        "RF spectrum becomes live when RX is started; call markers remain simulated. "
         "Real offline MBTiles supported. No SDR device connected.");
 }
 
@@ -354,7 +385,7 @@ void MainWindow::createMenus() {
             "Version 0.1.0 — Operator Interface Preview\n\n"
             "Spectrum, waterfall, calls and station positions are simulated. "
             "User-supplied offline MBTiles basemaps are real. "
-            "RTL-SDR hardware enumeration is available; IQ capture, receiver filters and decoders "
+            "RTL-SDR live I/Q and FFT are available; audio, receiver filters and decoders "
             "are not implemented yet.");
     });
 }
