@@ -1,15 +1,14 @@
 #pragma once
-
 #include <QWidget>
 
 class QLabel;
 class QTableWidget;
-class QLineEdit;
+class QDoubleSpinBox;
 
 namespace signalforge::ui {
 
-// Phase 1: read-only hardware discovery. Never opens, tunes or records from
-// an SDR; the eventual per-device receiver sessions live outside UI widgets.
+// A view/controller for a shared, independent receive-only RTL engine.
+// Closing this dock never stops the active hardware session.
 class ReceiverWidget final : public QWidget {
 public:
     explicit ReceiverWidget(QWidget* parent = nullptr);
@@ -17,8 +16,13 @@ public:
 private:
     void chooseDriver();
     void refreshDevices();
+    void startSelected();
+    void refreshStatus();
+
     QTableWidget* table_ = nullptr;
+    QDoubleSpinBox* frequency_ = nullptr;
     QLabel* status_ = nullptr;
+    QLabel* streamingStatus_ = nullptr;
     QLabel* warning_ = nullptr;
 };
 
