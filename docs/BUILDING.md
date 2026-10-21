@@ -16,12 +16,16 @@ The current build provides a **Qt 6 desktop shell** with dockable/floating panel
 
 ## Phase 1: RTL-SDR USB receiver discovery preview
 
-The **Receivers** panel performs genuine read-only device enumeration through
+The **Receivers** panel performs genuine USB device enumeration through
 the `librtlsdr` API. Its discovery interface should work with common
 RTL2832U-class SDRs, including Nooelec NESDR models and RTL-SDR Blog V4 units.
 It shows USB index, driver name, product and serial number, plus duplicate
-serial warnings. The panel **does not open the device**, tune, stream I/Q, or
-replace Windows USB drivers. RF spectrum and decoder data are still simulated.
+serial warnings. The panel also supports **receive-only live IQ capture**:
+open one chosen RTL-SDR, configure a 2.4 MSPS stream with automatic gain,
+tune its center frequency, and feed its complex samples to a 1,024-bin
+Hann-windowed FFT and the **Spectrum / Waterfall** dock. It never changes
+Windows USB drivers or enables transmit/bias tee. Call tables and geographic
+overlays remain simulated; there is no audio/demodulator or decoder yet.
 
 ### Windows 11 quick-start
 
@@ -34,6 +38,11 @@ replace Windows USB drivers. RF spectrum and decoder data are still simulated.
    No separate DLL download should be necessary for normal testing.
 3. Open the **Receivers** dock and press **Scan USB Devices**.
    The USB index, name, and serial should be shown for each connected dongle.
+   **Select a device row**, choose a center frequency (try **100.0000 MHz**
+   with an appropriate FM broadcast antenna), and press **Start RX**. Open
+   **Spectrum / Waterfall** to view actual FFT levels from the selected SDR.
+   The heading says **LIVE RTL-SDR IQ FFT** when real IQ is displayed.
+   Press **Stop RX** to release the USB device.
 4. If you previously configured a custom DLL path in an older preview,
    click **Use Installed Driver** to return to the bundled runtime.
    **Select RTL-SDR Library…** is available when testing an alternative
@@ -43,6 +52,22 @@ replace Windows USB drivers. RF spectrum and decoder data are still simulated.
    SDR application is claiming the device. If *two* connected receivers share
    a USB serial, their indices can change on reconnect; permanent device
    profiles will not be assigned by ambiguous indexes.
+
+**Live receive notes:** You can retune with the **Center** frequency control
+or the spectrum's mouse wheel (25 kHz increments). **Ctrl+mouse wheel**
+changes the *visible display span* and cannot zoom out beyond the captured
+2.4 MHz. The amber filter/passband is **still visualization only**; there
+is no audio output or real analog demodulation. FFT levels are normalized
+for visualization, not calibrated dBm or a certified signal meter.
+Closing/hiding any panel never stops the shared RX worker; use **Stop RX** to
+release the dongle. Only **one active receiver at a time** is supported in
+this increment, even if several SDRs are enumerated.
+
+**If no live waterfall appears:** check the receiver status for USB/driver
+errors and that **FFT frames** increase. A missing antenna does not prevent
+receiving noise. Inserting/removing dongles while RX runs may terminate the
+stream; stop and restart after reconnection. Do not operate multiple SDR
+applications that claim the same USB device at the same time.
 
 This **userspace** `rtlsdr.dll` is a different piece of software than the
 **Windows USB/WinUSB driver**. The packaged DLL does not install/change USB
@@ -62,13 +87,18 @@ documented in [third_party/SDR_RUNTIME_NOTICES.md](../third_party/SDR_RUNTIME_NO
 The preview ZIP is fully offline once downloaded. Future SDR drivers will
 have separate pinned versions, checksums, and license notices.
 
+Automated CTest also uses a self-contained fake RTL-SDR USB library to
+exercise real async IQ callbacks, FFT spectral peaks, center-frequency
+retuning, stop/restart and clean switching to another indexed mock receiver.
+
 For developer packaging checks (Windows), running
 `SignalForge.exe --rtl-driver-self-test` exits successfully if the
 packaged RTL-SDR library and dependencies can load, even with no dongle
 connected. It is a driver test only; it never tests real RF reception.
 
-**Next increment:** independent per-dongle receiver sessions, I/Q streaming,
-actual FFT/waterfall, and fault-tolerant start/stop/reconnect behavior.
+**Next increment:** simultaneous independent per-dongle receiver sessions,
+audio demodulation, rate/gain/frequency-correction controls, robust hot-unplug
+recovery and saved receiver task assignments.
 
 ## Requirements
 
@@ -175,4 +205,4 @@ Note: saved layouts from the earlier preview may not restore after the central-w
 
 ## Known limitations
 
-No SDR device access, **real RF** waterfall, audio, live aircraft/APRS locations, TX or decoders are present. An imported MBTiles basemap is genuine georeferenced map data, but all RF/position overlays remain synthetic. Frequency offset utility tests exist but are not wired to drivers. SignalForge-authored code is `GPL-3.0-or-later`; release packaging and third-party dependency/license notices need additional review before a general release.
+This branch's test build supports one actual RTL-SDR receive-only IQ stream and real FFT/waterfall (after Start RX), but **audio, live aircraft/APRS locations, TX and decoders remain absent**. An imported MBTiles basemap is genuine georeferenced map data, but all RF/position overlays remain synthetic. Frequency offset utility tests exist but are not wired to drivers. SignalForge-authored code is `GPL-3.0-or-later`; release packaging and third-party dependency/license notices need additional review before a general release.
