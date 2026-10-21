@@ -8,9 +8,13 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(SIGNALFORGE_BUILD_GUI "Build the Qt 6 desktop application" ON)
 
+find_package(Threads REQUIRED)
+
 add_library(signalforge_core STATIC src/core/Frequency.cpp src/core/WebMercator.cpp
-    src/core/RtlDiscovery.cpp)
-target_link_libraries(signalforge_core PRIVATE ${CMAKE_DL_LIBS})
+    src/core/RtlDiscovery.cpp
+    src/core/RtlIqReceiver.cpp
+    src/core/IqSpectrum.cpp)
+target_link_libraries(signalforge_core PUBLIC ${CMAKE_DL_LIBS} Threads::Threads)
 target_include_directories(signalforge_core PUBLIC src)
 target_compile_features(signalforge_core PUBLIC cxx_std_20)
 if(MSVC)
@@ -32,6 +36,14 @@ if(BUILD_TESTING)
     target_link_libraries(signalforge_rtl_discovery_tests PRIVATE signalforge_core)
     add_test(NAME signalforge_rtl_discovery_tests
              COMMAND signalforge_rtl_discovery_tests
+             $<TARGET_FILE:signalforge_mock_rtlsdr>)
+    add_executable(signalforge_iq_tests tests/IqSpectrumTests.cpp)
+    target_link_libraries(signalforge_iq_tests PRIVATE signalforge_core)
+    add_test(NAME signalforge_iq_tests COMMAND signalforge_iq_tests)
+    add_executable(signalforge_rtl_live_mock_tests tests/RtlLiveMockTests.cpp)
+    target_link_libraries(signalforge_rtl_live_mock_tests PRIVATE signalforge_core)
+    add_test(NAME signalforge_rtl_live_mock_tests
+             COMMAND signalforge_rtl_live_mock_tests
              $<TARGET_FILE:signalforge_mock_rtlsdr>)
 endif()
 
