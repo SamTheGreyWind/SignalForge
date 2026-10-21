@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <vector>
 
 class QMouseEvent;
 class QPaintEvent;
@@ -29,6 +30,13 @@ public:
     void setSpanHz(qint64 span, double anchor = 0.5);
     [[nodiscard]] qint64 spanHz() const noexcept { return spanHz_; }
     void setSpanChangedHandler(std::function<void(qint64)> onChange);
+    // Live IQ is fed from the GUI-independent shared receiver service.
+    // Pass only new FFT frames; no hardware handles belong to this widget.
+    void setLiveFrame(const std::vector<float>& bins, qint64 center,
+                      qint64 sampleRate);
+    void leaveLiveMode();
+    [[nodiscard]] bool liveMode() const noexcept { return liveMode_; }
+    void setRetuneHandler(std::function<void(qint64)> onRetune);
 
 protected:
     void paintEvent(QPaintEvent* event) override;
@@ -61,9 +69,14 @@ private:
     qint64 passbandHz_ = 180'000;
     int frame_ = 0;
     bool running_ = true;
+    bool liveMode_ = false;
+    qint64 liveCenterHz_ = 0;
+    qint64 liveSampleRate_ = 0;
+    std::vector<float> liveBins_;
     DragMode dragMode_ = DragMode::None;
     std::function<void(qint64)> bandwidthChanged_;
     std::function<void(qint64)> spanChanged_;
+    std::function<void(qint64)> retuneRequested_;
 };
 
 }  // namespace signalforge::ui
