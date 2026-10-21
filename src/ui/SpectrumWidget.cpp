@@ -86,7 +86,7 @@ SpectrumWidget::SpectrumWidget(QWidget* parent)
 
 void SpectrumWidget::setRunning(bool running) {
     running_ = running;
-    if (running_) timer_.start(85);
+    if (running_ && !liveMode_) timer_.start(85);
     else timer_.stop();
     update();
 }
@@ -103,8 +103,44 @@ void SpectrumWidget::setBandwidthChangedHandler(std::function<void(qint64)> onCh
     bandwidthChanged_ = std::move(onChange);
 }
 
+void SpectrumWidget::setLiveFrame(const std::vector<float>& bins,
+                                  qint64 frequency, qint64 sampleRate) {
+    if (bins.empty() || sampleRate <= 0) return;
+    const bool reset = !liveMode_ || liveCenterHz_ != frequency ||
+                       liveSampleRate_ != sampleRate;
+    liveMode_ = true;
+    liveCenterHz_ = frequency;
+    liveSampleRate_ = sampleRate;
+    liveBins_ = bins;
+    timer_.stop();
+    if (reset) {
+        centerHz_ = frequency;
+        vfoHz_ = frequency;
+        spanHz_ = sampleRate;
+        history_.fill(QColor(4, 15, 51));
+        if (spanChanged_) spanChanged_(spanHz_);
+    }
+    ++frame_;
+    addScanline();
+    update();
+}
+
+void SpectrumWidget::leaveLiveMode() {
+    if (!liveMode_) return;
+    liveMode_ = false;
+    liveBins_.clear();
+    history_.fill(QColor(4, 15, 51));
+    if (running_) timer_.start(85);
+    update();
+}
+
+void SpectrumWidget::setRetuneHandler(std::function<void(qint64)> callback) {
+    retuneRequested_ = std::move(callback);
+}
+
 void SpectrumWidget::setSpanHz(qint64 span, double anchor) {
-    const qint64 nextSpan = std::clamp(span, kMinSpanHz, kMaxSpanHz);
+    const qint64 nextSpan = std::clamp(span, kMinSpanHz,
+        liveMode_ ? std::min(kMaxSpanHz, liveSampleRate_) : kMaxSpanHz);
     if (nextSpan == spanHz_) return;
     anchor = std::clamp(anchor, 0.0, 1.0);
 
@@ -113,8 +149,14 @@ void SpectrumWidget::setSpanHz(qint64 span, double anchor) {
         (anchor - 0.5) * static_cast<double>(spanHz_);
     const double proposedCenter = frequencyAtAnchor -
         (anchor - 0.5) * static_cast<double>(nextSpan);
-    centerHz_ = static_cast<qint64>(std::llround(std::max(
-        proposedCenter, static_cast<double>(nextSpan) * 0.5)));
+    const double clampedCenter = liveMode_
+        ? std::clamp(proposedCenter,
+            static_cast<double>(liveCenterHz_) -
+            (liveSampleRate_ - nextSpan) * 0.5,
+            static_cast<double>(liveCenterHz_) +
+            (liveSampleRate_ - nextSpan) * 0.5)
+        : std::max(proposedCenter, static_cast<double>(nextSpan) * 0.5);
+    centerHz_ = static_cast<qint64>(std::llround(clampedCenter));
     spanHz_ = nextSpan;
 
     // Old raster columns were indexed by the prior frequency span. Clear
@@ -136,6 +178,17 @@ double SpectrumWidget::powerAt(int bin) const {
     const double fraction = (bin + 0.5) / static_cast<double>(kBins);
     const double hz = static_cast<double>(centerHz_) +
                       (fraction - 0.5) * spanHz_;
+    if (liveMode_) {
+        if (liveBins_.empty()) return 0.0;
+        const double position =
+            (hz - (liveCenterHz_ - liveSampleRate_ * 0.5)) /
+            static_cast<double>(liveSampleRate_);
+        if (position < 0 || position >= 1.0) return 0.0;
+        const std::size_t idx = std::min(
+            static_cast<std::size_t>(position * liveBins_.size()),
+            liveBins_.size() - 1);
+        return static_cast<double>(liveBins_[idx]);
+    }
     const double coarse = hashedNoise(bin, frame_);
     const double fine = hashedNoise(bin * 9 + 13, frame_ / 3);
     double level = 0.11 + 0.09 * coarse + 0.035 * (fine - 0.5);
@@ -199,7 +252,9 @@ void SpectrumWidget::paintEvent(QPaintEvent*) {
     const QRect water = waterfallBounds();
 
     painter.setPen(QColor(93, 219, 247));
-    painter.drawText(12, 19, "SIMULATED FFT / WATERFALL  -  NO RECEIVER CONNECTED");
+    painter.drawText(12, 19, liveMode_
+        ? "LIVE RTL-SDR IQ FFT / WATERFALL  -  UNCALIBRATED"
+        : "SIMULATED FFT / WATERFALL  -  NO RECEIVER CONNECTED");
     painter.setPen(QColor(220, 235, 248));
     painter.drawText(12, 42,
         QString("VFO %1 MHz  |  Filter %2 kHz  |  Span %3 MHz")
@@ -272,7 +327,7 @@ void SpectrumWidget::paintEvent(QPaintEvent*) {
         painter.drawText(QRect(x - 40, water.bottom() + 3, 80, 18),
                          Qt::AlignCenter, QString::number(mhz, 'f', 2));
     }
-    if (!running_) {
+    if (!running_ && !liveMode_) {
         painter.fillRect(water, QColor(0, 0, 0, 128));
         painter.setPen(Qt::white);
         painter.drawText(water, Qt::AlignCenter, "SIMULATION PAUSED");
@@ -361,9 +416,16 @@ void SpectrumWidget::wheelEvent(QWheelEvent* event) {
                 static_cast<double>(spanHz_) * std::pow(0.75, steps)));
             setSpanHz(requested, anchor);
         } else {
-            // Preserve existing wheel-to-tune behavior for demo operators.
-            vfoHz_ = std::max<qint64>(0, vfoHz_ + steps * 25'000LL);
-            panToFrequency(vfoHz_);
+            // In LIVE mode, the owning RX worker handles hardware retuning.
+            // The GUI only requests it; it never calls a USB API directly.
+            if (liveMode_ && retuneRequested_) {
+                const auto target = std::max<qint64>(24'000'000,
+                                                    liveCenterHz_ + steps * 25'000LL);
+                retuneRequested_(target);
+            } else {
+                vfoHz_ = std::max<qint64>(0, vfoHz_ + steps * 25'000LL);
+                panToFrequency(vfoHz_);
+            }
         }
         event->accept();
         return;
