@@ -53,6 +53,29 @@ jobs:
           if (!(Test-Path $sqlitePlugin)) { throw "Missing Qt SQLite plugin: $sqlitePlugin" }
           New-Item -ItemType Directory -Force -Path "preview/sqldrivers" | Out-Null
           Copy-Item $sqlitePlugin "preview/sqldrivers/qsqlite.dll" -Force
+          # Ship a known RTL-SDR Blog release so an installed WinUSB driver is
+          # sufficient for most testers. Never substitute an untrusted DLL from
+          # PATH/CWD. This version supports both generic RTL2832U and Blog V4.
+          $rtlVersion = "V1.4.0"
+          $driverZip = Join-Path $env:RUNNER_TEMP "rtl-sdr-blog-$rtlVersion.zip"
+          $driverRoot = Join-Path $env:RUNNER_TEMP "rtl-sdr-blog-extracted"
+          $download = "https://github.com/rtlsdrblog/rtl-sdr-blog/releases/download/$rtlVersion/Release.zip"
+          Invoke-WebRequest -Uri $download -OutFile $driverZip
+          Get-FileHash -Path $driverZip -Algorithm SHA256 | Format-List
+          Expand-Archive -Path $driverZip -DestinationPath $driverRoot -Force
+          Get-ChildItem $driverRoot -Recurse -File | Select-Object FullName, Length | Format-Table
+          $library = Get-ChildItem $driverRoot -Recurse -File -Filter "rtlsdr.dll" |
+            Where-Object { $_.FullName -match '[/\\]x64[/\\]' } | Select-Object -First 1
+          if (!$library) { throw "RTL-SDR upstream release lacks the x64 rtlsdr.dll" }
+          $vendorDir = Split-Path $library.FullName -Parent
+          Copy-Item $library.FullName "preview/rtlsdr.dll" -Force
+          foreach ($dependency in @("pthreadVC2.dll", "pthread.dll", "libusb-1.0.dll", "libusb.dll")) {
+            $dependencyPath = Join-Path $vendorDir $dependency
+            if (Test-Path $dependencyPath) {
+              Copy-Item $dependencyPath (Join-Path "preview" $dependency) -Force
+            }
+          }
+          Write-Host "Bundled RTL-SDR Blog $rtlVersion x64 runtime and available dependencies"
           python tools/generate_demo_mbtiles.py "preview/maps/SignalForge_Offline_GIS_Sample.mbtiles"
           if (!(Test-Path "preview/maps/SignalForge_Offline_GIS_Sample.mbtiles")) {
             throw "Bundled map generator did not create a file"
