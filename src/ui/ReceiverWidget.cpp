@@ -11,6 +11,7 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QSettings>
+#include <QSignalBlocker>
 #include <QTableWidget>
 #include <QTableWidgetItem>
 #include <QTimer>
@@ -137,6 +138,7 @@ void ReceiverWidget::refreshDevices() {
             table_->setItem(row, col, new QTableWidgetItem(values[col]));
         }
     }
+    if (table_->rowCount() > 0) table_->selectRow(0);
     QString text = QString::fromStdString(report.diagnostic);
     if (!library.isEmpty()) {
         text += "\nDriver: " + QFileInfo(library).absoluteFilePath();
@@ -177,6 +179,10 @@ void ReceiverWidget::startSelected() {
 
 void ReceiverWidget::refreshStatus() {
     const auto state = signalforge::core::sharedRtlIqReceiver()->snapshot();
+    if (state.receiving && !frequency_->hasFocus()) {
+        const QSignalBlocker blocker(frequency_);
+        frequency_->setValue(static_cast<double>(state.centerHz) / 1'000'000.0);
+    }
     streamingStatus_->setText(QString::fromStdString(state.status) +
         QString(" | FFT frames: %1").arg(state.fftFrames));
 }
