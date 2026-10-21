@@ -14,60 +14,61 @@ This preview is **not an installer** and is not a signed release. Windows SmartS
 
 The current build provides a **Qt 6 desktop shell** with dockable/floating panels, named layouts, a moving **synthetic** spectrum/waterfall, sample monitoring tables, a genuine **offline raster MBTiles map reader**, and a small independently testable C++ core. **No hardware SDR reception or protocol decoding is implemented yet.**
 
-## Phase 1: RTL-SDR Blog V4 receiver discovery preview
+## Phase 1: RTL-SDR USB receiver discovery preview
 
-The **Receivers** dock now performs **real read-only device enumeration** using
-the public \`librtlsdr\` driver API. It can list multiple RTL-SDR receivers,
-including two RTL-SDR Blog V4 units, and reports their USB index, device name,
-USB product and serial number. This **does not open a device**, stream I/Q,
-tune frequencies, calculate real RF FFT samples or alter USB device settings.
+The **Receivers** panel performs genuine read-only device enumeration through
+the `librtlsdr` API. Its discovery interface should work with common
+RTL2832U-class SDRs, including Nooelec NESDR models and RTL-SDR Blog V4 units.
+It shows USB index, driver name, product and serial number, plus duplicate
+serial warnings. The panel **does not open the device**, tune, stream I/Q, or
+replace Windows USB drivers. RF spectrum and decoder data are still simulated.
 
-**V4 driver compatibility is essential.** The Blog V4 uses an R828D tuner and
-nonstandard RF routing that requires updated driver support. A generic/old DLL
-may successfully enumerate your dongles **yet receive incorrect signals**.
-Follow the manufacturer's guide:
-https://www.rtl-sdr.com/v4/
-RTL-SDR Blog's driver source/releases:
-https://github.com/rtlsdrblog/rtl-sdr-blog
+### Windows 11 quick-start
 
-On Windows 11:
+1. Connect your RTL-SDR dongle(s). If they already work in another SDR
+   application, **don't modify the installed WinUSB driver**.
+2. Download the Windows artifact from the *latest passing run on PR #5*,
+   extract it, and keep all DLLs together with `SignalForge.exe`.
+   **The Windows preview now bundles `rtlsdr.dll` and
+   `pthreadVC2.dll`** from an upstream RTL-SDR Blog x64 V1.4.0 release.
+   No separate DLL download should be necessary for normal testing.
+3. Open the **Receivers** dock and press **Scan USB Devices**.
+   The USB index, name, and serial should be shown for each connected dongle.
+4. If you previously configured a custom DLL path in an older preview,
+   click **Use Installed Driver** to return to the bundled runtime.
+   **Select RTL-SDR Library…** is available when testing an alternative
+   trusted 64-bit DLL; an absolute path is saved in app settings.
+5. If the library loads but zero devices appear, check the USB cable/hub,
+   the device's WinUSB binding (normally interface 0), and whether another
+   SDR application is claiming the device. If *two* connected receivers share
+   a USB serial, their indices can change on reconnect; permanent device
+   profiles will not be assigned by ambiguous indexes.
 
-1. Connect either or both V4 receivers to the computer. If they already work
-   in other SDR software, do not change their USB driver configuration.
-2. Use the **x64** RTL-SDR Blog V4-compatible driver runtime. The preview
-   intentionally **does not bundle** the third-party \`rtlsdr.dll\`. You may
-   place \`rtlsdr.dll\` plus any required matching dependency DLLs beside
-   \`SignalForge.exe\`, or click **Select V4 Driver DLL…** in Receivers and
-   browse to the full path of a trustworthy V4-compatible DLL. Do not mix x86
-   DLLs with the x64 SignalForge executable.
-3. Open **Receivers → Scan USB Devices**. Two connected devices should appear
-   as two rows, each with an index and a hardware USB serial number.
-4. If no devices appear despite a successfully loaded driver, check the
-   receiver's existing WinUSB/libusb setup, USB cable/hub, and whether another
-   application has exclusive access. Always follow RTL-SDR Blog's guidance
-   before changing operating-system USB drivers.
-5. If SignalForge reports duplicate/missing serials, the driver cannot safely
-   use the serial strings to restore persistent per-device assignments.
-   Distinguish the physical dongles before building persistent profiles.
-   Never automatically change EEPROM serials. Changes using \`rtl_eeprom\`
-   are a separate, explicit hardware-maintenance operation.
+This **userspace** `rtlsdr.dll` is a different piece of software than the
+**Windows USB/WinUSB driver**. The packaged DLL does not install/change USB
+drivers. On Linux, a compatible `librtlsdr.so`, udev permissions and
+device access are still prerequisites.
 
-On Linux, install a V4-compatible \`librtlsdr.so\` and set appropriate
-udev permissions before using discovery. **Select V4 Driver DLL…** can also
-load an explicitly chosen shared library file, despite the generic button
-label.
+RTL-SDR Blog V4/V4L require updated RTL-SDR-compatible driver code, which is
+why the preview uses their maintained upstream release. Nooelec and most
+other generic RTL2832U SDRs should also enumerate through this common API.
+Device enumeration is not proof that a driver can tune a specific radio.
 
-**Security/licensing:** The driver path is user-configured and persisted;
-the application loads native executable code from that location. Only use
-a trusted driver build. The core's Qt-free discovery adapter uses runtime
-dynamic library lookup so CI does not download or redistribute a proprietary
-or unreviewed driver binary. Its C API and dual-device serial identification
-are exercised through a **fake library fixture in CTest**, without any RF
-hardware. Any actual driver bundling is subject to a further licensing audit.
+**Source/licensing:** the CI package downloads RTL-SDR Blog **V1.4.0**
+from [its official releases](https://github.com/rtlsdrblog/rtl-sdr-blog/releases/tag/V1.4.0),
+checks an exact SHA-256 archive checksum, and bundles the upstream license
+notices in `licenses/`. Source, copyright and dependency details are
+documented in [third_party/SDR_RUNTIME_NOTICES.md](../third_party/SDR_RUNTIME_NOTICES.md).
+The preview ZIP is fully offline once downloaded. Future SDR drivers will
+have separate pinned versions, checksums, and license notices.
 
-**Next planned increment:** separate per-dongle receiver sessions, sample
-rate and tuning controls, bounded I/Q streams, actual FFT/waterfall rendering,
-and clean start/stop/disconnect logic; analog demodulation follows afterward.
+For developer packaging checks (Windows), running
+`SignalForge.exe --rtl-driver-self-test` exits successfully if the
+packaged RTL-SDR library and dependencies can load, even with no dongle
+connected. It is a driver test only; it never tests real RF reception.
+
+**Next increment:** independent per-dongle receiver sessions, I/Q streaming,
+actual FFT/waterfall, and fault-tolerant start/stop/reconnect behavior.
 
 ## Requirements
 
