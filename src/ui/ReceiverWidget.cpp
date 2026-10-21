@@ -25,7 +25,7 @@ ReceiverWidget::ReceiverWidget(QWidget* parent) : QWidget(parent) {
 
     auto* toolbar = new QHBoxLayout;
     auto* refresh = new QPushButton("Scan USB Devices", this);
-    auto* choose = new QPushButton("Select V4 Driver DLL…", this);
+    auto* choose = new QPushButton("Select RTL-SDR Library…", this);
     auto* reset = new QPushButton("Use Installed Driver", this);
     toolbar->addWidget(refresh);
     toolbar->addWidget(choose);
@@ -47,7 +47,7 @@ ReceiverWidget::ReceiverWidget(QWidget* parent) : QWidget(parent) {
     status_->setTextInteractionFlags(Qt::TextSelectableByMouse);
     layout->addWidget(status_);
     warning_ = new QLabel(
-        "RTL-SDR Blog V4 requires an updated compatible RTL-SDR driver. "
+        "RTL-SDR Blog V4/V4L requires updated compatible RTL-SDR software. "
         "Discovery does NOT prove the DLL can tune the V4 correctly. "
         "Bias tee stays off; no hardware is opened by this panel.", this);
     warning_->setWordWrap(true);
@@ -71,7 +71,7 @@ void ReceiverWidget::chooseDriver() {
     const QString filter = "RTL-SDR shared library (*.so *.so.*);;All files (*)";
 #endif
     const QString path = QFileDialog::getOpenFileName(
-        this, "Choose V4-Compatible RTL-SDR Library", {}, filter);
+        this, "Choose RTL-SDR Library", {}, filter);
     if (path.isEmpty()) return;
     QSettings().setValue("receivers/rtlDriverPath", path);
     refreshDevices();
@@ -101,8 +101,8 @@ void ReceiverWidget::refreshDevices() {
     if (!library.isEmpty()) {
         text += "\nDriver: " + QFileInfo(library).absoluteFilePath();
     } else if (!report.driverLoaded) {
-        text += "\nFor Windows, place a **V4-compatible x64 rtlsdr.dll** "
-                "beside SignalForge.exe, or choose it using the button above.";
+        text += "\nFor Windows, the preview normally includes x64 rtlsdr.dll. If missing, place a compatible DLL "
+                "beside SignalForge.exe, or choose one using the button above.";
     }
     if (report.driverLoaded) {
         int ambiguous = 0;
